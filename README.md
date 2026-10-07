@@ -144,7 +144,7 @@ Tous les diagrammes se trouvent dans [`documentation/`](documentation/README.md)
 |---|---|
 | Java | JDK 25 |
 | Spring Boot | 4.1.1 |
-| Spring Cloud | 2025.1.2 (Netflix Eureka, Gateway Server WebFlux) |
+| Spring Cloud | 2025.1.2 (Netflix Eureka, Gateway Server Web MVC sur Tomcat) |
 | Spring Data JPA / H2 | base en mémoire, une par service |
 | springdoc-openapi | 3.1.1 (Swagger UI) |
 | MapStruct | 1.6.3 |
@@ -173,7 +173,7 @@ Sous Windows, utilisez `mvnw.cmd spring-boot:run` dans cmd et `.\mvnw.cmd spring
 | URL | Description |
 |---|---|
 | http://localhost:8761 | Dashboard Eureka (8 instances attendues) |
-| http://localhost:8080/actuator/gateway/routes | Routes de la Gateway |
+| http://localhost:8080/actuator/health | Santé de la Gateway |
 | http://localhost:8081/swagger-ui.html … http://localhost:8086/swagger-ui.html | Swagger UI des services Spring Boot |
 | http://localhost:8087/swagger-ui | Swagger UI du service Python |
 

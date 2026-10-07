@@ -7,7 +7,7 @@ flowchart LR
     Client["Client"]
 
     subgraph GW["«component» api-gateway"]
-        Routes["Route locator<br/>Path predicates"]
+        Routes["Routes Web MVC<br/>Path predicates"]
         LB["LoadBalancer client"]
         GWE["Eureka client"]
     end
@@ -49,7 +49,7 @@ flowchart LR
 
 | Composant | Interfaces fournies | Interfaces requises |
 |---|---|---|
-| api-gateway | `:8080/api/v1/**`, `/actuator/gateway/routes` | registre Eureka, API REST des services |
+| api-gateway | `:8080/api/v1/**`, `/actuator/health` | registre Eureka, API REST des services |
 | eureka-server | `/eureka/apps`, dashboard `/` | – |
 | microservice Spring Boot | `/api/v1/<ressource>`, `/v3/api-docs`, `/swagger-ui.html`, `/actuator/health` | registre Eureka |
 | notification-service | `/api/v1/notifications`, `/v3/api-docs`, `/swagger-ui`, `/health` | registre Eureka |
