@@ -31,6 +31,11 @@ class GatewayRoutesTest {
 
         assertThat(routes).containsExactlyInAnyOrderEntriesOf(Map.of(
                 "book-service", "lb://BOOK-SERVICE",
+                "member-service", "lb://MEMBER-SERVICE",
+                "loan-service", "lb://LOAN-SERVICE",
+                "review-service", "lb://REVIEW-SERVICE",
+                "event-service", "lb://EVENT-SERVICE",
+                "author-service", "lb://AUTHOR-SERVICE",
                 "notification-service", "lb://NOTIFICATION-SERVICE"));
     }
 

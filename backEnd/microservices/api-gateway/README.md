@@ -10,6 +10,11 @@ Point d'entrée unique du backend (Spring Cloud Gateway Server Web MVC, sur Tomc
 | Chemin | Cible |
 |---|---|
 | `/api/v1/books/**` | `lb://BOOK-SERVICE` |
+| `/api/v1/members/**` | `lb://MEMBER-SERVICE` |
+| `/api/v1/loans/**` | `lb://LOAN-SERVICE` |
+| `/api/v1/reviews/**` | `lb://REVIEW-SERVICE` |
+| `/api/v1/events/**` | `lb://EVENT-SERVICE` |
+| `/api/v1/authors/**` | `lb://AUTHOR-SERVICE` |
 | `/api/v1/notifications/**` | `lb://NOTIFICATION-SERVICE` |
 
 Les en-têtes `X-Forwarded-*` ajoutés par la Gateway (activés par `trusted-proxies`, limité à localhost) permettent aux microservices de renvoyer un en-tête `Location` qui pointe vers la Gateway (`http://localhost:8080/...`).
