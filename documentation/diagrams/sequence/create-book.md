@@ -11,7 +11,7 @@ sequenceDiagram
     participant SV as BookServiceImpl
     participant MP as BookMapper
     participant RP as BookRepository
-    participant DB as H2 bookdb
+    participant DB as MySQL bookdb
 
     C->>GW: POST /api/v1/books (BookRequest)
     GW->>CT: POST /api/v1/books

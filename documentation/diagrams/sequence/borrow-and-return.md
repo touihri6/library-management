@@ -8,7 +8,7 @@ sequenceDiagram
     actor B as Bibliothécaire
     participant GW as API Gateway
     participant LS as loan-service
-    participant DB as H2 loandb
+    participant DB as MySQL loandb
 
     B->>GW: POST /api/v1/loans {bookId, memberId, loanDate, dueDate}
     GW->>LS: POST /api/v1/loans

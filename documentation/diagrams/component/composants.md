@@ -23,7 +23,7 @@ flowchart LR
         Act["Actuator /actuator/health"]
         Core["Controller → Service → Repository"]
         EC["Eureka client"]
-        H2[("H2")]
+        DB[("MySQL")]
     end
 
     subgraph PY["«component» notification-service (FastAPI)"]
@@ -40,7 +40,7 @@ flowchart LR
     GWE -->|fetch registry| Reg
     LB -->|HTTP| API
     LB -->|HTTP| PAPI
-    API --> Core --> H2
+    API --> Core --> DB
     PAPI --> PS
     EC -->|register / heartbeat| Reg
     PEC -->|register / heartbeat| Reg

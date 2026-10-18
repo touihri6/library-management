@@ -5,14 +5,13 @@ Gestion des auteurs des livres du catalogue.
 - Port : `8086`
 - Nom Eureka : `AUTHOR-SERVICE`
 - Via l'API Gateway : `http://localhost:8080/api/v1/authors`
-- Base de données : H2 en mémoire (`jdbc:h2:mem:authordb`), 5 auteurs chargés depuis `data.sql`
+- Base de données : MySQL (`jdbc:mysql://localhost:3306/authordb`, créée automatiquement au démarrage ; utilisateur `root`, mot de passe vide). Les données sont conservées entre les redémarrages.
 
 ## Démarrage
 ```bash
 ./mvnw spring-boot:run
 ```
 - Swagger UI : http://localhost:8086/swagger-ui.html
-- Console H2 : http://localhost:8086/h2-console
 - Santé : http://localhost:8086/actuator/health
 
 ## Endpoints

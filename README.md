@@ -69,13 +69,13 @@ flowchart TB
     GW --> LIB & MEM & LOAN & REV & EVT & AUT & NOT
 ```
 
-Chaque microservice Spring Boot suit la même **architecture en couches** : `Controller` (DTO, validation) → `Service` (règles métier, transactions) → `Repository` (Spring Data JPA) → base H2, avec un `Mapper` MapStruct et un `GlobalExceptionHandler`.
+Chaque microservice Spring Boot suit la même **architecture en couches** : `Controller` (DTO, validation) → `Service` (règles métier, transactions) → `Repository` (Spring Data JPA) → base MySQL, avec un `Mapper` MapStruct et un `GlobalExceptionHandler`.
 
 ➡️ Détail : [Architecture logique](documentation/diagrams/architecture/architecture-logique.md)
 
 ### 2.2 Architecture physique
 
-Chaque microservice est un **processus indépendant** sur son propre port : une JVM par service Spring Boot, un processus Uvicorn pour le service Python. Chaque service Spring Boot embarque une **base H2 en mémoire** ; le service Python conserve ses données **en mémoire**. Au démarrage, chaque service **s'enregistre dans Eureka** puis envoie un **heartbeat toutes les 30 s**. Sans heartbeat pendant 90 s, l'instance est retirée du registre.
+Chaque microservice est un **processus indépendant** sur son propre port : une JVM par service Spring Boot, un processus Uvicorn pour le service Python. Chaque service Spring Boot utilise **sa propre base MySQL** (`bookdb`, `memberdb`, …) sur un serveur MySQL local (`localhost:3306`) ; les données sont **conservées entre les redémarrages**. Le service Python conserve ses données **en mémoire**. Au démarrage, chaque service **s'enregistre dans Eureka** puis envoie un **heartbeat toutes les 30 s**. Sans heartbeat pendant 90 s, l'instance est retirée du registre.
 
 ```mermaid
 flowchart TB
@@ -84,12 +84,12 @@ flowchart TB
     subgraph Host["Poste local (localhost)"]
         GW["api-gateway :8080"]
         EU["eureka-server :8761"]
-        LIB["book-service :8081"] --- H1[("H2")]
-        MEM["member-service :8082"] --- H2[("H2")]
-        LOAN["loan-service :8083"] --- H3[("H2")]
-        REV["review-service :8084"] --- H4[("H2")]
-        EVT["event-service :8085"] --- H5[("H2")]
-        AUT["author-service :8086"] --- H6[("H2")]
+        LIB["book-service :8081"] --- DB1[("MySQL bookdb")]
+        MEM["member-service :8082"] --- DB2[("MySQL memberdb")]
+        LOAN["loan-service :8083"] --- DB3[("MySQL loandb")]
+        REV["review-service :8084"] --- DB4[("MySQL reviewdb")]
+        EVT["event-service :8085"] --- DB5[("MySQL eventdb")]
+        AUT["author-service :8086"] --- DB6[("MySQL authordb")]
         NOT["notification-service :8087"] --- M[("mémoire")]
     end
 
@@ -145,7 +145,7 @@ Tous les diagrammes se trouvent dans [`documentation/`](documentation/README.md)
 | Java | JDK 25 |
 | Spring Boot | 4.1.1 |
 | Spring Cloud | 2025.1.2 (Netflix Eureka, Gateway Server Web MVC sur Tomcat) |
-| Spring Data JPA / H2 | base en mémoire, une par service |
+| Spring Data JPA / MySQL | MySQL 8 (ou MariaDB, ex. XAMPP) sur `localhost:3306`, utilisateur `root` sans mot de passe ; une base par service, créée automatiquement au démarrage. H2 sert uniquement aux tests |
 | springdoc-openapi | 3.1.1 (Swagger UI) |
 | MapStruct | 1.6.3 |
 | Python | 3.10+ (FastAPI, Uvicorn, py-eureka-client, pytest) |
@@ -155,7 +155,7 @@ Tous les diagrammes se trouvent dans [`documentation/`](documentation/README.md)
 
 ## 5. Démarrage
 
-Lancez chaque service dans un terminal séparé, **dans cet ordre** :
+Démarrez d'abord **MySQL** sur `localhost:3306` (les bases sont créées automatiquement), puis lancez chaque service dans un terminal séparé, **dans cet ordre** :
 
 | Ordre | Service | Commande (depuis `backEnd/microservices/<service>`) |
 |---|---|---|
@@ -181,7 +181,7 @@ Sous Windows, utilisez `mvnw.cmd spring-boot:run` dans cmd et `.\mvnw.cmd spring
 
 ## 6. Exemples d'appels via la Gateway
 
-Toutes les requêtes passent par **http://localhost:8080** :
+Toutes les requêtes passent par **http://localhost:8080**. Les bases MySQL sont **vides au premier démarrage** (aucune donnée d'exemple) : créez d'abord des livres, adhérents, etc. avant d'utiliser les identifiants ci-dessous.
 
 ```bash
 curl http://localhost:8080/api/v1/books?genre=TECHNOLOGY

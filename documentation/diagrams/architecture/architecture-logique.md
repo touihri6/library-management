@@ -61,7 +61,7 @@ flowchart LR
     C --> S["Service<br/>interface + impl"]
     S --> M["Mapper<br/>MapStruct"]
     S --> R["Repository<br/>Spring Data JPA"]
-    R --> DB[("H2")]
+    R --> DB[("MySQL")]
     C -. erreurs .-> H["GlobalExceptionHandler<br/>ProblemDetail RFC 9457"]
 ```
 

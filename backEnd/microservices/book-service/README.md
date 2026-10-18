@@ -26,7 +26,7 @@ HTTP ─► BookController ─► BookService (interface) ─► BookServiceImpl
 
 ## Requirements
 - JDK 25
-- Nothing else: the Maven wrapper (`mvnw`) is included, and H2 runs in memory.
+- A running MySQL on `localhost:3306` (user `root`, empty password). The `bookdb` database is created automatically on first start.
 
 ## Run
 ```bash
@@ -34,12 +34,11 @@ HTTP ─► BookController ─► BookService (interface) ─► BookServiceImpl
 ```
 - Swagger UI: http://localhost:8081/swagger-ui.html
 - OpenAPI JSON: http://localhost:8081/v3/api-docs
-- H2 console: http://localhost:8081/h2-console (JDBC URL `jdbc:h2:mem:bookdb`, user `sa`, empty password)
 - Health check: http://localhost:8081/actuator/health
 
-On startup, `data.sql` adds 6 sample books.
+Data is stored in MySQL and kept across restarts (`ddl-auto=update`). No sample data is loaded.
 
-### With PostgreSQL instead of H2
+### With PostgreSQL instead of MySQL
 Requires a running PostgreSQL on `localhost:5432` with a database `library` (user `library`, password `library`).
 ```bash
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=postgres
@@ -59,4 +58,4 @@ Requires a running PostgreSQL on `localhost:5432` with a database `library` (use
 ./mvnw test
 ```
 - `BookServiceImplTest`: unit tests with a Mockito-mocked repository and the real generated mapper.
-- `BookControllerIntegrationTest`: full-stack tests through MockMvc and H2, plus a check that the OpenAPI docs are exposed.
+- `BookControllerIntegrationTest`: full-stack tests through MockMvc and an in-memory H2 database (seeded from `src/test/resources/data.sql`), plus a check that the OpenAPI docs are exposed.

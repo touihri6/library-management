@@ -5,14 +5,13 @@ Gestion des événements organisés par la bibliothèque : clubs de lecture, ate
 - Port : `8085`
 - Nom Eureka : `EVENT-SERVICE`
 - Via l'API Gateway : `http://localhost:8080/api/v1/events`
-- Base de données : H2 en mémoire (`jdbc:h2:mem:eventdb`), 5 événements chargés depuis `data.sql`
+- Base de données : MySQL (`jdbc:mysql://localhost:3306/eventdb`, créée automatiquement au démarrage ; utilisateur `root`, mot de passe vide). Les données sont conservées entre les redémarrages.
 
 ## Démarrage
 ```bash
 ./mvnw spring-boot:run
 ```
 - Swagger UI : http://localhost:8085/swagger-ui.html
-- Console H2 : http://localhost:8085/h2-console
 - Santé : http://localhost:8085/actuator/health
 
 ## Endpoints

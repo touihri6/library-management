@@ -5,14 +5,13 @@ Gestion des adhérents de la bibliothèque.
 - Port : `8082`
 - Nom Eureka : `MEMBER-SERVICE`
 - Via l'API Gateway : `http://localhost:8080/api/v1/members`
-- Base de données : H2 en mémoire (`jdbc:h2:mem:memberdb`), 5 adhérents chargés depuis `data.sql`
+- Base de données : MySQL (`jdbc:mysql://localhost:3306/memberdb`, créée automatiquement au démarrage ; utilisateur `root`, mot de passe vide). Les données sont conservées entre les redémarrages.
 
 ## Démarrage
 ```bash
 ./mvnw spring-boot:run
 ```
 - Swagger UI : http://localhost:8082/swagger-ui.html
-- Console H2 : http://localhost:8082/h2-console
 - Santé : http://localhost:8082/actuator/health
 
 ## Endpoints

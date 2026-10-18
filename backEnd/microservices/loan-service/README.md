@@ -5,14 +5,13 @@ Gestion des emprunts : emprunt et retour des livres. Un emprunt stocke `bookId` 
 - Port : `8083`
 - Nom Eureka : `LOAN-SERVICE`
 - Via l'API Gateway : `http://localhost:8080/api/v1/loans`
-- Base de données : H2 en mémoire (`jdbc:h2:mem:loandb`), 5 emprunts chargés depuis `data.sql`
+- Base de données : MySQL (`jdbc:mysql://localhost:3306/loandb`, créée automatiquement au démarrage ; utilisateur `root`, mot de passe vide). Les données sont conservées entre les redémarrages.
 
 ## Démarrage
 ```bash
 ./mvnw spring-boot:run
 ```
 - Swagger UI : http://localhost:8083/swagger-ui.html
-- Console H2 : http://localhost:8083/h2-console
 - Santé : http://localhost:8083/actuator/health
 
 ## Endpoints

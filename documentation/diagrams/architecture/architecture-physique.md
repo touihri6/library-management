@@ -3,7 +3,7 @@
 L'architecture physique décrit **le déploiement** : quels processus tournent, sur quels ports, et où sont stockées les données.
 
 - Chaque microservice est un **processus indépendant** (une JVM par service Spring Boot, un processus Uvicorn pour Python).
-- Chaque service Spring Boot embarque sa **propre base H2 en mémoire** ; le service Python garde ses données **en mémoire**.
+- Chaque service Spring Boot a sa **propre base MySQL** sur un serveur MySQL local (`localhost:3306`), avec des données **conservées entre les redémarrages** ; le service Python garde ses données **en mémoire**.
 - Au démarrage, chaque service **s'enregistre** dans Eureka puis envoie un **heartbeat toutes les 30 s**.
 - La Gateway récupère le registre Eureka et **répartit la charge** entre les instances (`lb://`).
 
@@ -19,22 +19,22 @@ flowchart TB
             EU["eureka-server"]
         end
         subgraph P2["JVM :8081"]
-            LIB["book-service"] --- H1[("H2 bookdb")]
+            LIB["book-service"] --- DB1[("MySQL bookdb")]
         end
         subgraph P3["JVM :8082"]
-            MEM["member-service"] --- H2[("H2 memberdb")]
+            MEM["member-service"] --- DB2[("MySQL memberdb")]
         end
         subgraph P4["JVM :8083"]
-            LOAN["loan-service"] --- H3[("H2 loandb")]
+            LOAN["loan-service"] --- DB3[("MySQL loandb")]
         end
         subgraph P5["JVM :8084"]
-            REV["review-service"] --- H4[("H2 reviewdb")]
+            REV["review-service"] --- DB4[("MySQL reviewdb")]
         end
         subgraph P6["JVM :8085"]
-            EVT["event-service"] --- H5[("H2 eventdb")]
+            EVT["event-service"] --- DB5[("MySQL eventdb")]
         end
         subgraph P7["JVM :8086"]
-            AUT["author-service"] --- H6[("H2 authordb")]
+            AUT["author-service"] --- DB6[("MySQL authordb")]
         end
         subgraph P8["Python Uvicorn :8087"]
             NOT["notification-service"] --- M[("dict en mémoire")]
@@ -53,10 +53,10 @@ flowchart TB
 |---|---|---|---|---|
 | api-gateway | Spring Cloud Gateway | 8080 | API-GATEWAY | – |
 | eureka-server | Spring Cloud Netflix Eureka | 8761 | – | registre en mémoire |
-| book-service | Spring Boot | 8081 | BOOK-SERVICE | H2 `bookdb` |
-| member-service | Spring Boot | 8082 | MEMBER-SERVICE | H2 `memberdb` |
-| loan-service | Spring Boot | 8083 | LOAN-SERVICE | H2 `loandb` |
-| review-service | Spring Boot | 8084 | REVIEW-SERVICE | H2 `reviewdb` |
-| event-service | Spring Boot | 8085 | EVENT-SERVICE | H2 `eventdb` |
-| author-service | Spring Boot | 8086 | AUTHOR-SERVICE | H2 `authordb` |
+| book-service | Spring Boot | 8081 | BOOK-SERVICE | MySQL `bookdb` |
+| member-service | Spring Boot | 8082 | MEMBER-SERVICE | MySQL `memberdb` |
+| loan-service | Spring Boot | 8083 | LOAN-SERVICE | MySQL `loandb` |
+| review-service | Spring Boot | 8084 | REVIEW-SERVICE | MySQL `reviewdb` |
+| event-service | Spring Boot | 8085 | EVENT-SERVICE | MySQL `eventdb` |
+| author-service | Spring Boot | 8086 | AUTHOR-SERVICE | MySQL `authordb` |
 | notification-service | Python / FastAPI | 8087 | NOTIFICATION-SERVICE | mémoire |
