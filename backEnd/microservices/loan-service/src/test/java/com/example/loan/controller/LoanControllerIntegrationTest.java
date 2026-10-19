@@ -1,16 +1,28 @@
 package com.example.loan.controller;
 
+import com.example.loan.client.BookClient;
+import com.example.loan.client.MemberClient;
+import com.example.loan.dto.BookResponse;
+import com.example.loan.dto.MemberResponse;
+import feign.FeignException;
+import feign.Request;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.Map;
 
 import static org.hamcrest.Matchers.startsWith;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -32,8 +44,35 @@ class LoanControllerIntegrationTest {
             }
             """;
 
+    private static final BookResponse AVAILABLE_BOOK =
+            new BookResponse(6L, "Effective Java", "Joshua Bloch", "978-0134685991", 1, true);
+    private static final MemberResponse MEMBER =
+            new MemberResponse(4L, "Amine", "Ben Ali", "amine@mail.com", "STUDENT");
+
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private BookClient bookClient;
+
+    @MockitoBean
+    private MemberClient memberClient;
+
+    @BeforeEach
+    void setUp() {
+        when(bookClient.findById(anyLong())).thenReturn(AVAILABLE_BOOK);
+        when(memberClient.findById(anyLong())).thenReturn(MEMBER);
+    }
+
+    private static FeignException.NotFound notFound(String url) {
+        Request request = Request.create(Request.HttpMethod.GET, url, Map.of(), null, StandardCharsets.UTF_8, null);
+        return new FeignException.NotFound("404", request, null, Map.of());
+    }
+
+    private static FeignException.ServiceUnavailable unavailable(String url) {
+        Request request = Request.create(Request.HttpMethod.GET, url, Map.of(), null, StandardCharsets.UTF_8, null);
+        return new FeignException.ServiceUnavailable("503", request, null, Map.of());
+    }
 
     @Test
     void list_filteredByStatus() throws Exception {
@@ -110,5 +149,57 @@ class LoanControllerIntegrationTest {
                         .header("X-Forwarded-Proto", "http"))
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", startsWith("http://localhost:8080/api/v1/loans/")));
+    }
+
+    @Test
+    void create_withUnknownBook_returns404() throws Exception {
+        when(bookClient.findById(6L)).thenThrow(notFound("/api/v1/books/6"));
+
+        mockMvc.perform(post("/api/v1/loans").contentType(MediaType.APPLICATION_JSON).content(NEW_LOAN))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value("Book 6 not found"));
+    }
+
+    @Test
+    void create_withUnknownMember_returns404() throws Exception {
+        when(memberClient.findById(4L)).thenThrow(notFound("/api/v1/members/4"));
+
+        mockMvc.perform(post("/api/v1/loans").contentType(MediaType.APPLICATION_JSON).content(NEW_LOAN))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value("Member 4 not found"));
+    }
+
+    @Test
+    void create_withUnavailableBook_returns409() throws Exception {
+        when(bookClient.findById(6L))
+                .thenReturn(new BookResponse(6L, "Effective Java", "Joshua Bloch", "978-0134685991", 0, false));
+
+        mockMvc.perform(post("/api/v1/loans").contentType(MediaType.APPLICATION_JSON).content(NEW_LOAN))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Book 6 has no available copy"));
+    }
+
+    @Test
+    void create_whenBookServiceDown_returns503() throws Exception {
+        when(bookClient.findById(6L)).thenThrow(unavailable("/api/v1/books/6"));
+
+        mockMvc.perform(post("/api/v1/loans").contentType(MediaType.APPLICATION_JSON).content(NEW_LOAN))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.title").value("Service unavailable"));
+    }
+
+    @Test
+    void details_returnsLoanWithBookAndMember() throws Exception {
+        mockMvc.perform(get("/api/v1/loans/1/details"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.book.title").value("Effective Java"))
+                .andExpect(jsonPath("$.member.email").value("amine@mail.com"));
+    }
+
+    @Test
+    void details_ofUnknownLoan_returns404() throws Exception {
+        mockMvc.perform(get("/api/v1/loans/999/details"))
+                .andExpect(status().isNotFound());
     }
 }

@@ -1,5 +1,6 @@
 package com.example.loan.service;
 
+import com.example.loan.dto.LoanDetails;
 import com.example.loan.dto.LoanRequest;
 import com.example.loan.dto.LoanResponse;
 import com.example.loan.dto.PageResponse;
@@ -11,6 +12,8 @@ public interface LoanService {
     PageResponse<LoanResponse> findAll(Long memberId, Long bookId, LoanStatus status, Pageable pageable);
 
     LoanResponse findById(Long id);
+
+    LoanDetails findDetails(Long id);
 
     LoanResponse create(LoanRequest request);
 

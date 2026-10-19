@@ -1,7 +1,12 @@
 package com.example.loan.service.impl;
 
+import com.example.loan.client.BookClient;
+import com.example.loan.client.MemberClient;
+import com.example.loan.dto.BookResponse;
+import com.example.loan.dto.LoanDetails;
 import com.example.loan.dto.LoanRequest;
 import com.example.loan.dto.LoanResponse;
+import com.example.loan.dto.MemberResponse;
 import com.example.loan.dto.PageResponse;
 import com.example.loan.exception.InvalidDatesException;
 import com.example.loan.exception.InvalidOperationException;
@@ -11,6 +16,7 @@ import com.example.loan.model.entity.Loan;
 import com.example.loan.model.enums.LoanStatus;
 import com.example.loan.repository.LoanRepository;
 import com.example.loan.service.LoanService;
+import feign.FeignException;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,10 +29,15 @@ public class LoanServiceImpl implements LoanService {
 
     private final LoanRepository loanRepository;
     private final LoanMapper loanMapper;
+    private final BookClient bookClient;
+    private final MemberClient memberClient;
 
-    public LoanServiceImpl(LoanRepository loanRepository, LoanMapper loanMapper) {
+    public LoanServiceImpl(LoanRepository loanRepository, LoanMapper loanMapper,
+                           BookClient bookClient, MemberClient memberClient) {
         this.loanRepository = loanRepository;
         this.loanMapper = loanMapper;
+        this.bookClient = bookClient;
+        this.memberClient = memberClient;
     }
 
     @Override
@@ -40,9 +51,23 @@ public class LoanServiceImpl implements LoanService {
     }
 
     @Override
+    public LoanDetails findDetails(Long id) {
+        Loan loan = getLoanOrThrow(id);
+        BookResponse book = getBookOrThrow(loan.getBookId());
+        MemberResponse member = getMemberOrThrow(loan.getMemberId());
+        return new LoanDetails(loan.getId(), loan.getLoanDate(), loan.getDueDate(), loan.getReturnDate(),
+                loan.getStatus(), book, member);
+    }
+
+    @Override
     @Transactional
     public LoanResponse create(LoanRequest request) {
         checkDates(request);
+        getMemberOrThrow(request.memberId());
+        BookResponse book = getBookOrThrow(request.bookId());
+        if (!book.available()) {
+            throw new InvalidOperationException("Book " + book.id() + " has no available copy");
+        }
         Loan loan = loanMapper.toEntity(request);
         loan.setStatus(LoanStatus.ONGOING);
         return loanMapper.toResponse(loanRepository.save(loan));
@@ -53,6 +78,8 @@ public class LoanServiceImpl implements LoanService {
     public LoanResponse update(Long id, LoanRequest request) {
         Loan loan = getLoanOrThrow(id);
         checkDates(request);
+        getMemberOrThrow(request.memberId());
+        getBookOrThrow(request.bookId());
         loanMapper.updateEntity(request, loan);
         return loanMapper.toResponse(loanRepository.saveAndFlush(loan));
     }
@@ -84,5 +111,21 @@ public class LoanServiceImpl implements LoanService {
     private Loan getLoanOrThrow(Long id) {
         return loanRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Loan " + id + " not found"));
+    }
+
+    private BookResponse getBookOrThrow(Long id) {
+        try {
+            return bookClient.findById(id);
+        } catch (FeignException.NotFound ex) {
+            throw new ResourceNotFoundException("Book " + id + " not found");
+        }
+    }
+
+    private MemberResponse getMemberOrThrow(Long id) {
+        try {
+            return memberClient.findById(id);
+        } catch (FeignException.NotFound ex) {
+            throw new ResourceNotFoundException("Member " + id + " not found");
+        }
     }
 }

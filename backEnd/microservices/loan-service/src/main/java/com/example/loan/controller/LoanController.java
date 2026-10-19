@@ -1,5 +1,6 @@
 package com.example.loan.controller;
 
+import com.example.loan.dto.LoanDetails;
 import com.example.loan.dto.LoanRequest;
 import com.example.loan.dto.LoanResponse;
 import com.example.loan.dto.PageResponse;
@@ -58,10 +59,24 @@ public class LoanController {
         return loanService.findById(id);
     }
 
+    @GetMapping("/{id}/details")
+    @Operation(summary = "Get a loan with its book and member",
+            description = "Book and member are read from book-service and member-service through OpenFeign")
+    @ApiResponse(responseCode = "200", description = "Loan found")
+    @ApiResponse(responseCode = "404", description = "Loan, book or member not found")
+    @ApiResponse(responseCode = "503", description = "book-service or member-service unavailable")
+    public LoanDetails findDetails(@PathVariable Long id) {
+        return loanService.findDetails(id);
+    }
+
     @PostMapping
-    @Operation(summary = "Borrow a book (create a loan)")
+    @Operation(summary = "Borrow a book (create a loan)",
+            description = "The book and the member are checked in book-service and member-service through OpenFeign")
     @ApiResponse(responseCode = "201", description = "Loan created with status ONGOING")
     @ApiResponse(responseCode = "400", description = "Invalid payload or dueDate not after loanDate")
+    @ApiResponse(responseCode = "404", description = "Book or member not found")
+    @ApiResponse(responseCode = "409", description = "Book has no available copy")
+    @ApiResponse(responseCode = "503", description = "book-service or member-service unavailable")
     public ResponseEntity<LoanResponse> create(@Valid @RequestBody LoanRequest request) {
         LoanResponse created = loanService.create(request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -73,7 +88,8 @@ public class LoanController {
     @Operation(summary = "Update a loan (book, member and dates)")
     @ApiResponse(responseCode = "200", description = "Loan updated")
     @ApiResponse(responseCode = "400", description = "Invalid payload or dueDate not after loanDate")
-    @ApiResponse(responseCode = "404", description = "Loan not found")
+    @ApiResponse(responseCode = "404", description = "Loan, book or member not found")
+    @ApiResponse(responseCode = "503", description = "book-service or member-service unavailable")
     public LoanResponse update(@PathVariable Long id, @Valid @RequestBody LoanRequest request) {
         return loanService.update(id, request);
     }

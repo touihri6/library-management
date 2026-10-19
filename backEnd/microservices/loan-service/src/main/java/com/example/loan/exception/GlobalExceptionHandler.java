@@ -1,5 +1,6 @@
 package com.example.loan.exception;
 
+import feign.FeignException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpHeaders;
@@ -33,6 +34,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(InvalidDatesException.class)
     public ProblemDetail handleInvalidDates(InvalidDatesException ex) {
         return problem(HttpStatus.BAD_REQUEST, "Invalid dates", ex.getMessage());
+    }
+
+    @ExceptionHandler(FeignException.class)
+    public ProblemDetail handleRemoteServiceError(FeignException ex) {
+        return problem(HttpStatus.SERVICE_UNAVAILABLE, "Service unavailable",
+                "book-service or member-service is unavailable");
     }
 
     @ExceptionHandler({PropertyReferenceException.class, InvalidDataAccessApiUsageException.class})
