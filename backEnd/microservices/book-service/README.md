@@ -49,13 +49,25 @@ Requires a running PostgreSQL on `localhost:5432` with a database `library` (use
 |---|---|---|
 | GET | `/api/v1/books?author=&genre=&page=0&size=20&sort=title,asc` | Paginated list with filters |
 | GET | `/api/v1/books/{id}` | Get one book |
+| GET | `/api/v1/books/{id}/details` | Get one book with its rating, read from review-service through OpenFeign |
 | POST | `/api/v1/books` | Create a book (201 + `Location` header) |
 | PUT | `/api/v1/books/{id}` | Replace a book |
 | DELETE | `/api/v1/books/{id}` | Delete a book (204) |
+
+## Communication with OpenFeign
+`GET /api/v1/books/{id}/details` returns the book and its rating (`average`, `count`). The rating comes from review-service through the OpenFeign client `com.example.book.client.ReviewClient`:
+
+| Client | Eureka name | Call |
+|---|---|---|
+| `ReviewClient` | `REVIEW-SERVICE` | `GET /api/v1/reviews/books/{bookId}/average` |
+
+- `@EnableFeignClients` on `BookServiceApplication` enables the client; Eureka resolves the service name (no hard-coded URL, the Gateway is not used).
+- If review-service is stopped or not registered in Eureka, the endpoint still answers `200` with `"rating": null` (graceful degradation): the book stays readable without its rating.
+- Each call is logged in the console (`logger-level=basic`).
 
 ## Tests
 ```bash
 ./mvnw test
 ```
 - `BookServiceImplTest`: unit tests with a Mockito-mocked repository and the real generated mapper.
-- `BookControllerIntegrationTest`: full-stack tests through MockMvc and an in-memory H2 database (seeded from `src/test/resources/data.sql`), plus a check that the OpenAPI docs are exposed.
+- `BookControllerIntegrationTest`: full-stack tests through MockMvc and an in-memory H2 database (seeded from `src/test/resources/data.sql`), plus a check that the OpenAPI docs are exposed. `ReviewClient` is replaced by a mock (`@MockitoBean`), so the tests need neither Eureka nor review-service.

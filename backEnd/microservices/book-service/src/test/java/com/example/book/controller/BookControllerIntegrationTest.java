@@ -1,15 +1,25 @@
 package com.example.book.controller;
 
+import com.example.book.client.ReviewClient;
+import com.example.book.dto.RatingSummary;
+import feign.FeignException;
+import feign.Request;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -37,6 +47,9 @@ class BookControllerIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private ReviewClient reviewClient;
 
     @Test
     void listBooks_filteredByGenre() throws Exception {
@@ -116,5 +129,36 @@ class BookControllerIntegrationTest {
                         .header("X-Forwarded-Proto", "http"))
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", startsWith("http://localhost:8080/api/v1/books/")));
+    }
+
+    @Test
+    void details_returnsBookWithRating() throws Exception {
+        when(reviewClient.findAverage(1L)).thenReturn(new RatingSummary(1L, 4.5, 2));
+
+        mockMvc.perform(get("/api/v1/books/1/details"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.book.title").value("Dune"))
+                .andExpect(jsonPath("$.rating.average").value(4.5))
+                .andExpect(jsonPath("$.rating.count").value(2));
+    }
+
+    @Test
+    void details_whenReviewServiceDown_returnsBookWithoutRating() throws Exception {
+        Request request = Request.create(Request.HttpMethod.GET, "/api/v1/reviews/books/1/average",
+                Map.of(), null, StandardCharsets.UTF_8, null);
+        when(reviewClient.findAverage(1L))
+                .thenThrow(new FeignException.ServiceUnavailable("503", request, null, Map.of()));
+
+        mockMvc.perform(get("/api/v1/books/1/details"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.book.title").value("Dune"))
+                .andExpect(jsonPath("$.rating").doesNotExist());
+    }
+
+    @Test
+    void details_ofUnknownBook_returns404WithoutCallingReviewService() throws Exception {
+        mockMvc.perform(get("/api/v1/books/999/details"))
+                .andExpect(status().isNotFound());
+        verifyNoInteractions(reviewClient);
     }
 }

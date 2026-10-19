@@ -1,5 +1,6 @@
 package com.example.book.controller;
 
+import com.example.book.dto.BookDetails;
 import com.example.book.dto.BookRequest;
 import com.example.book.dto.BookResponse;
 import com.example.book.dto.PageResponse;
@@ -54,6 +55,15 @@ public class BookController {
     @ApiResponse(responseCode = "404", description = "Book not found")
     public BookResponse findById(@PathVariable Long id) {
         return bookService.findById(id);
+    }
+
+    @GetMapping("/{id}/details")
+    @Operation(summary = "Get a book with its rating",
+            description = "The rating is read from review-service through OpenFeign; it is null when review-service is unavailable")
+    @ApiResponse(responseCode = "200", description = "Book found")
+    @ApiResponse(responseCode = "404", description = "Book not found")
+    public BookDetails findDetails(@PathVariable Long id) {
+        return bookService.findDetails(id);
     }
 
     @PostMapping

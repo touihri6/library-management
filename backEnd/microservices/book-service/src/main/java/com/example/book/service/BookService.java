@@ -1,5 +1,6 @@
 package com.example.book.service;
 
+import com.example.book.dto.BookDetails;
 import com.example.book.dto.BookRequest;
 import com.example.book.dto.BookResponse;
 import com.example.book.dto.PageResponse;
@@ -11,6 +12,8 @@ public interface BookService {
     PageResponse<BookResponse> findAll(String author, Genre genre, Pageable pageable);
 
     BookResponse findById(Long id);
+
+    BookDetails findDetails(Long id);
 
     BookResponse create(BookRequest request);
 
