@@ -1,0 +1,96 @@
+<header class="page-header">
+  <div>
+    <h1>Users</h1>
+    <p class="muted">Accounts managed in Keycloak through user-service.</p>
+  </div>
+  <a class="button primary" routerLink="/users/new">New user</a>
+</header>
+
+<app-alerts [feedback]="feedback" />
+
+<div class="toolbar">
+  <label class="select">
+    <span>Role</span>
+    <select (change)="setRole($any($event.target).value)">
+      <option value="">All roles</option>
+      @for (role of roles; track role) {
+        <option [value]="role">{{ label(role) }}</option>
+      }
+    </select>
+  </label>
+</div>
+
+@if (loading()) {
+  <p class="muted">Loading users…</p>
+} @else {
+  <div class="card table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Name</th>
+          <th>E-mail</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (user of page()?.content; track user.id) {
+          <tr>
+            <td>{{ user.username }}</td>
+            <td>{{ user.firstName }} {{ user.lastName }}</td>
+            <td>{{ user.email ?? '—' }}</td>
+            <td>
+              <select
+                class="inline-select"
+                [attr.aria-label]="'Role of ' + user.username"
+                [value]="user.role"
+                [disabled]="feedback.busy() || isMe(user)"
+                (change)="changeRole(user, $any($event.target).value)"
+              >
+                @for (role of roles; track role) {
+                  <option [value]="role" [selected]="role === user.role">{{ label(role) }}</option>
+                }
+              </select>
+            </td>
+            <td>
+              <span class="badge" [class.open]="user.enabled" [class.closed]="!user.enabled">
+                {{ user.enabled ? 'Enabled' : 'Disabled' }}
+              </span>
+            </td>
+            <td class="nowrap">
+              @if (!isMe(user)) {
+                <button
+                  type="button"
+                  class="button small"
+                  [disabled]="feedback.busy()"
+                  (click)="toggleEnabled(user)"
+                >
+                  {{ user.enabled ? 'Disable' : 'Enable' }}
+                </button>
+                <button
+                  type="button"
+                  class="button small danger"
+                  [disabled]="feedback.busy()"
+                  (click)="remove(user)"
+                >
+                  Delete
+                </button>
+              } @else {
+                <span class="muted">You</span>
+              }
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="6" class="empty">
+              No user yet. Users appear here once they register or sign in.
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <app-pager [page]="page()" (pageChange)="load($event)" />
+}

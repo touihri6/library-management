@@ -1,0 +1,71 @@
+<header class="page-header">
+  <div>
+    <h1>Authors</h1>
+    <p class="muted">The writers whose books are on our shelves.</p>
+  </div>
+  @if (auth.isStaff()) {
+    <a class="button primary" routerLink="/authors/new">New author</a>
+  }
+</header>
+
+<app-alerts [feedback]="feedback" />
+
+<form
+  class="toolbar"
+  (submit)="$event.preventDefault(); search(lastNameInput.value, nationalityInput.value)"
+>
+  <input
+    #lastNameInput
+    type="search"
+    class="inline-select"
+    placeholder="Last name"
+    [value]="lastName()"
+  />
+  <input
+    #nationalityInput
+    type="search"
+    class="inline-select"
+    placeholder="Nationality"
+    [value]="nationality()"
+  />
+  <button type="submit" class="button">Search</button>
+</form>
+
+@if (loading()) {
+  <p class="muted">Loading authors…</p>
+} @else {
+  <ul class="card-grid">
+    @for (author of page()?.content; track author.id) {
+      <li class="card">
+        <div class="card-head">
+          <h2>{{ author.firstName }} {{ author.lastName }}</h2>
+        </div>
+        <p class="meta">
+          {{ author.nationality }}
+          @if (author.birthYear) {
+            · born {{ author.birthYear }}
+          }
+        </p>
+        @if (author.biography) {
+          <p>{{ author.biography }}</p>
+        }
+        @if (auth.isStaff()) {
+          <div class="actions">
+            <a class="button small" [routerLink]="['/authors', author.id, 'edit']">Edit</a>
+            <button
+              type="button"
+              class="button small danger"
+              [disabled]="feedback.busy()"
+              (click)="remove(author)"
+            >
+              Delete
+            </button>
+          </div>
+        }
+      </li>
+    } @empty {
+      <li class="empty">No author matches these filters.</li>
+    }
+  </ul>
+  <app-pager [page]="page()" (pageChange)="load($event)" />
+}

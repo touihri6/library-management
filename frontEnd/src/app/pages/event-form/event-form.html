@@ -1,0 +1,56 @@
+<header class="page-header">
+  <div>
+    <h1>{{ id() ? 'Edit event' : 'New event' }}</h1>
+    <p class="muted">Events are stored by event-service and must take place in the future.</p>
+  </div>
+</header>
+
+<app-alerts [feedback]="feedback" />
+
+<form class="card form" [formGroup]="form" (ngSubmit)="save()">
+  <label for="title">Title</label>
+  <input id="title" type="text" formControlName="title" />
+  @if (invalid('title')) {
+    <small class="field-error">The title is required (max 150 characters).</small>
+  }
+
+  <div class="row">
+    <div class="field">
+      <label for="type">Type</label>
+      <select id="type" formControlName="type">
+        @for (type of types; track type) {
+          <option [value]="type">{{ label(type) }}</option>
+        }
+      </select>
+    </div>
+    <div class="field">
+      <label for="eventDate">Date and time</label>
+      <input id="eventDate" type="datetime-local" formControlName="eventDate" />
+    </div>
+  </div>
+  @if (invalid('eventDate')) {
+    <small class="field-error">The date is required.</small>
+  }
+
+  <div class="row">
+    <div class="field">
+      <label for="location">Location</label>
+      <input id="location" type="text" formControlName="location" />
+    </div>
+    <div class="field small">
+      <label for="capacity">Capacity</label>
+      <input id="capacity" type="number" min="1" formControlName="capacity" />
+    </div>
+  </div>
+  @if (invalid('location') || invalid('capacity')) {
+    <small class="field-error">The location is required and the capacity must be at least 1.</small>
+  }
+
+  <label for="description">Description</label>
+  <textarea id="description" rows="4" formControlName="description"></textarea>
+
+  <div class="actions">
+    <button type="submit" class="button primary" [disabled]="feedback.busy()">Save</button>
+    <a class="button ghost" routerLink="/events">Cancel</a>
+  </div>
+</form>

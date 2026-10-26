@@ -1,0 +1,91 @@
+<header class="page-header">
+  <div>
+    <h1>Loans</h1>
+    <p class="muted">Lend and take back books. The stock of each book is updated asynchronously.</p>
+  </div>
+  <a class="button primary" routerLink="/loans/new">New loan</a>
+</header>
+
+<app-alerts [feedback]="feedback" />
+
+<div class="toolbar">
+  <label class="select">
+    <span>Status</span>
+    <select (change)="setStatus($any($event.target).value)">
+      <option value="">All loans</option>
+      @for (status of statuses; track status) {
+        <option [value]="status">{{ label(status) }}</option>
+      }
+    </select>
+  </label>
+</div>
+
+@if (loading()) {
+  <p class="muted">Loading loans…</p>
+} @else {
+  <div class="card table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Book</th>
+          <th>Member</th>
+          <th>Borrowed</th>
+          <th>Due</th>
+          <th>Returned</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (loan of page()?.content; track loan.id) {
+          <tr>
+            <td>
+              <a [routerLink]="['/books', loan.bookId]">{{ bookTitle(loan) }}</a>
+            </td>
+            <td>{{ memberName(loan) }}</td>
+            <td class="nowrap">{{ loan.loanDate | date: 'mediumDate' }}</td>
+            <td class="nowrap">{{ loan.dueDate | date: 'mediumDate' }}</td>
+            <td class="nowrap">
+              {{ loan.returnDate ? (loan.returnDate | date: 'mediumDate') : '—' }}
+            </td>
+            <td>
+              <span
+                class="badge"
+                [class.ongoing]="loan.status === 'ONGOING'"
+                [class.late]="loan.status === 'LATE'"
+                [class.returned]="loan.status === 'RETURNED'"
+              >
+                {{ label(loan.status) }}
+              </span>
+            </td>
+            <td class="nowrap">
+              @if (loan.status !== 'RETURNED') {
+                <button
+                  type="button"
+                  class="button small"
+                  [disabled]="feedback.busy()"
+                  (click)="returnLoan(loan)"
+                >
+                  Return
+                </button>
+              }
+              <button
+                type="button"
+                class="button small danger"
+                [disabled]="feedback.busy()"
+                (click)="remove(loan)"
+              >
+                Delete
+              </button>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="7" class="empty">No loan matches this filter.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <app-pager [page]="page()" (pageChange)="load($event)" />
+}

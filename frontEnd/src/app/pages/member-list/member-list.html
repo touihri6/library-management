@@ -1,0 +1,71 @@
+<header class="page-header">
+  <div>
+    <h1>Members</h1>
+    <p class="muted">The people registered at the library desk.</p>
+  </div>
+  <a class="button primary" routerLink="/members/new">New member</a>
+</header>
+
+<app-alerts [feedback]="feedback" />
+
+<div class="toolbar">
+  <form class="select grow" (submit)="$event.preventDefault(); search(lastNameInput.value)">
+    <input #lastNameInput type="search" placeholder="Search by last name" [value]="lastName()" />
+    <button type="submit" class="button">Search</button>
+  </form>
+  <label class="select">
+    <span>Membership</span>
+    <select (change)="setMembershipType($any($event.target).value)">
+      <option value="">All</option>
+      @for (type of membershipTypes; track type) {
+        <option [value]="type">{{ label(type) }}</option>
+      }
+    </select>
+  </label>
+</div>
+
+@if (loading()) {
+  <p class="muted">Loading members…</p>
+} @else {
+  <div class="card table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>E-mail</th>
+          <th>Phone</th>
+          <th>Membership</th>
+          <th>Joined</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (member of page()?.content; track member.id) {
+          <tr>
+            <td>{{ member.firstName }} {{ member.lastName }}</td>
+            <td>{{ member.email }}</td>
+            <td class="nowrap">{{ member.phone ?? '—' }}</td>
+            <td>{{ label(member.membershipType) }}</td>
+            <td class="nowrap">{{ member.joinDate | date: 'mediumDate' }}</td>
+            <td class="nowrap">
+              <a class="button small" [routerLink]="['/members', member.id, 'edit']">Edit</a>
+              <button
+                type="button"
+                class="button small danger"
+                [disabled]="feedback.busy()"
+                (click)="remove(member)"
+              >
+                Delete
+              </button>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="6" class="empty">No member matches these filters.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <app-pager [page]="page()" (pageChange)="load($event)" />
+}

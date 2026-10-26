@@ -1,0 +1,80 @@
+<header class="page-header">
+  <div>
+    <h1>Create an account</h1>
+    <p class="muted">
+      Members can review books. Your account is created in Keycloak by user-service.
+    </p>
+  </div>
+</header>
+
+<app-alerts [feedback]="feedback" />
+
+@if (registeredUsername(); as username) {
+  <section class="card">
+    <p>
+      Welcome <strong>{{ username }}</strong
+      >, your account is ready.
+    </p>
+    <div class="actions">
+      <button type="button" class="button primary" (click)="signIn()">Sign in now</button>
+      <a class="button ghost" routerLink="/books">Browse the catalog</a>
+    </div>
+  </section>
+} @else if (auth.authenticated()) {
+  <p class="alert info">You are already signed in as {{ auth.profile()?.username }}.</p>
+} @else {
+  <form class="card form" [formGroup]="form" (ngSubmit)="register()">
+    <div class="row">
+      <div class="field">
+        <label for="firstName">First name</label>
+        <input id="firstName" type="text" formControlName="firstName" autocomplete="given-name" />
+      </div>
+      <div class="field">
+        <label for="lastName">Last name</label>
+        <input id="lastName" type="text" formControlName="lastName" autocomplete="family-name" />
+      </div>
+    </div>
+    @if (invalid('firstName') || invalid('lastName')) {
+      <small class="field-error">First and last names are required.</small>
+    }
+
+    <label for="email">E-mail</label>
+    <input id="email" type="email" formControlName="email" autocomplete="email" />
+    @if (invalid('email')) {
+      <small class="field-error">Enter a valid e-mail address.</small>
+    }
+
+    <div class="row">
+      <div class="field">
+        <label for="username">Username</label>
+        <input id="username" type="text" formControlName="username" autocomplete="username" />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input
+          id="password"
+          type="password"
+          formControlName="password"
+          autocomplete="new-password"
+        />
+      </div>
+    </div>
+    @if (invalid('username')) {
+      <small class="field-error"
+        >3 to 50 characters: letters, digits, dots, dashes or underscores.</small
+      >
+    }
+    @if (invalid('password')) {
+      <small class="field-error">The password needs at least 8 characters.</small>
+    }
+
+    <div class="actions">
+      <button type="submit" class="button primary" [disabled]="feedback.busy()">
+        Create my account
+      </button>
+      <button type="button" class="button ghost" (click)="auth.login('/books')">
+        I already have an account
+      </button>
+    </div>
+  </form>
+}

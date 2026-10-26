@@ -1,0 +1,60 @@
+<header class="page-header">
+  <div>
+    <h1>{{ id() ? 'Edit member' : 'New member' }}</h1>
+    <p class="muted">Members are stored by member-service.</p>
+  </div>
+</header>
+
+<app-alerts [feedback]="feedback" />
+
+<form class="card form" [formGroup]="form" (ngSubmit)="save()">
+  <div class="row">
+    <div class="field">
+      <label for="firstName">First name</label>
+      <input id="firstName" type="text" formControlName="firstName" />
+    </div>
+    <div class="field">
+      <label for="lastName">Last name</label>
+      <input id="lastName" type="text" formControlName="lastName" />
+    </div>
+  </div>
+  @if (invalid('firstName') || invalid('lastName')) {
+    <small class="field-error">First and last names are required (max 80 characters).</small>
+  }
+
+  <div class="row">
+    <div class="field">
+      <label for="email">E-mail</label>
+      <input id="email" type="email" formControlName="email" />
+    </div>
+    <div class="field">
+      <label for="phone">Phone</label>
+      <input id="phone" type="text" formControlName="phone" />
+    </div>
+  </div>
+  @if (invalid('email') || invalid('phone')) {
+    <small class="field-error"
+      >A valid e-mail is required; the phone is limited to 20 characters.</small
+    >
+  }
+
+  <div class="row">
+    <div class="field">
+      <label for="membershipType">Membership</label>
+      <select id="membershipType" formControlName="membershipType">
+        @for (type of membershipTypes; track type) {
+          <option [value]="type">{{ label(type) }}</option>
+        }
+      </select>
+    </div>
+    <div class="field">
+      <label for="joinDate">Joined on</label>
+      <input id="joinDate" type="date" formControlName="joinDate" [max]="maxDate" />
+    </div>
+  </div>
+
+  <div class="actions">
+    <button type="submit" class="button primary" [disabled]="feedback.busy()">Save</button>
+    <a class="button ghost" routerLink="/members">Cancel</a>
+  </div>
+</form>

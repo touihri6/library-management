@@ -1,0 +1,45 @@
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" routerLink="/books">Lib<span>rary</span></a>
+
+    <nav class="nav" aria-label="Main">
+      <a routerLink="/books" routerLinkActive="active">Catalog</a>
+      <a routerLink="/authors" routerLinkActive="active">Authors</a>
+      <a routerLink="/events" routerLinkActive="active">Events</a>
+      @if (auth.isStaff()) {
+        <a routerLink="/members" routerLinkActive="active">Members</a>
+        <a routerLink="/loans" routerLinkActive="active">Loans</a>
+      }
+      @if (auth.isAdmin()) {
+        <a routerLink="/users" routerLinkActive="active">Users</a>
+      }
+    </nav>
+
+    <div class="user">
+      @if (auth.authenticated()) {
+        <a class="user-text" routerLink="/profile">
+          <span class="user-name">{{ auth.displayName() }}</span>
+          @if (roleLabel()) {
+            <span class="role">{{ roleLabel() }}</span>
+          }
+        </a>
+        <button type="button" class="button ghost small" (click)="logout()">Sign out</button>
+      } @else {
+        <a class="button ghost small" routerLink="/register">Create an account</a>
+        <button type="button" class="button small" (click)="login()">Sign in</button>
+      }
+    </div>
+  </div>
+</header>
+
+@if (auth.identityProviderDown()) {
+  <div class="container">
+    <p class="alert info">
+      Keycloak is unreachable on port 8180: you can browse the catalog, but signing in is disabled.
+    </p>
+  </div>
+}
+
+<main class="container">
+  <router-outlet />
+</main>

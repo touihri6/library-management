@@ -1,0 +1,51 @@
+<header class="page-header">
+  <div>
+    <h1>New loan</h1>
+    <p class="muted">
+      loan-service checks the member and the book, then book-service lowers the stock.
+    </p>
+  </div>
+</header>
+
+<app-alerts [feedback]="feedback" />
+
+<form class="card form" [formGroup]="form" (ngSubmit)="save()">
+  <label for="memberId">Member</label>
+  <select id="memberId" formControlName="memberId">
+    <option [ngValue]="null" disabled>Choose a member</option>
+    @for (member of members(); track member.id) {
+      <option [ngValue]="member.id">
+        {{ member.firstName }} {{ member.lastName }} · {{ member.email }}
+      </option>
+    }
+  </select>
+
+  <label for="bookId">Book</label>
+  <select id="bookId" formControlName="bookId">
+    <option [ngValue]="null" disabled>Choose an available book</option>
+    @for (book of availableBooks(); track book.id) {
+      <option [ngValue]="book.id">
+        {{ book.title }} · {{ book.author }} ({{ book.availableCopies }} left)
+      </option>
+    }
+  </select>
+  @if (form.touched && (form.controls.memberId.invalid || form.controls.bookId.invalid)) {
+    <small class="field-error">Choose a member and a book.</small>
+  }
+
+  <div class="row">
+    <div class="field">
+      <label for="loanDate">Loan date</label>
+      <input id="loanDate" type="date" formControlName="loanDate" />
+    </div>
+    <div class="field">
+      <label for="dueDate">Due date</label>
+      <input id="dueDate" type="date" formControlName="dueDate" />
+    </div>
+  </div>
+
+  <div class="actions">
+    <button type="submit" class="button primary" [disabled]="feedback.busy()">Lend the book</button>
+    <a class="button ghost" routerLink="/loans">Cancel</a>
+  </div>
+</form>

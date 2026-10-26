@@ -1,0 +1,48 @@
+<header class="page-header">
+  <div>
+    <h1>{{ id() ? 'Edit author' : 'New author' }}</h1>
+    <p class="muted">Authors are stored by author-service.</p>
+  </div>
+</header>
+
+<app-alerts [feedback]="feedback" />
+
+<form class="card form" [formGroup]="form" (ngSubmit)="save()">
+  <div class="row">
+    <div class="field">
+      <label for="firstName">First name</label>
+      <input id="firstName" type="text" formControlName="firstName" />
+    </div>
+    <div class="field">
+      <label for="lastName">Last name</label>
+      <input id="lastName" type="text" formControlName="lastName" />
+    </div>
+  </div>
+  @if (invalid('firstName') || invalid('lastName')) {
+    <small class="field-error">First and last names are required (max 80 characters).</small>
+  }
+
+  <div class="row">
+    <div class="field">
+      <label for="nationality">Nationality</label>
+      <input id="nationality" type="text" formControlName="nationality" />
+    </div>
+    <div class="field small">
+      <label for="birthYear">Birth year</label>
+      <input id="birthYear" type="number" formControlName="birthYear" />
+    </div>
+  </div>
+  @if (invalid('nationality') || invalid('birthYear')) {
+    <small class="field-error"
+      >The nationality is required; the birth year must be between 1000 and 2100.</small
+    >
+  }
+
+  <label for="biography">Biography</label>
+  <textarea id="biography" rows="4" formControlName="biography"></textarea>
+
+  <div class="actions">
+    <button type="submit" class="button primary" [disabled]="feedback.busy()">Save</button>
+    <a class="button ghost" routerLink="/authors">Cancel</a>
+  </div>
+</form>

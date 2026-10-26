@@ -1,0 +1,70 @@
+<header class="page-header">
+  <div>
+    <h1>{{ id() ? 'Edit book' : 'New book' }}</h1>
+    <p class="muted">Books are stored by book-service.</p>
+  </div>
+</header>
+
+<app-alerts [feedback]="feedback" />
+
+<form class="card form" [formGroup]="form" (ngSubmit)="save()">
+  <label for="title">Title</label>
+  <input id="title" type="text" formControlName="title" />
+  @if (invalid('title')) {
+    <small class="field-error">The title is required (max 200 characters).</small>
+  }
+
+  <label for="author">Author</label>
+  <input id="author" type="text" formControlName="author" list="author-names" />
+  <datalist id="author-names">
+    @for (name of authorNames(); track name) {
+      <option [value]="name"></option>
+    }
+  </datalist>
+  @if (invalid('author')) {
+    <small class="field-error">The author is required (max 120 characters).</small>
+  }
+
+  <div class="row">
+    <div class="field">
+      <label for="isbn">ISBN</label>
+      <input id="isbn" type="text" formControlName="isbn" placeholder="978-0441172719" />
+      @if (invalid('isbn')) {
+        <small class="field-error">Enter a valid ISBN (digits and dashes).</small>
+      }
+    </div>
+    <div class="field">
+      <label for="genre">Genre</label>
+      <select id="genre" formControlName="genre">
+        @for (genre of genres; track genre) {
+          <option [value]="genre">{{ label(genre) }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="field small">
+      <label for="publicationYear">Year</label>
+      <input id="publicationYear" type="number" formControlName="publicationYear" />
+    </div>
+    <div class="field small">
+      <label for="price">Price (TND)</label>
+      <input id="price" type="number" step="0.01" min="0" formControlName="price" />
+    </div>
+    <div class="field small">
+      <label for="availableCopies">Copies</label>
+      <input id="availableCopies" type="number" min="0" formControlName="availableCopies" />
+    </div>
+  </div>
+  @if (invalid('publicationYear') || invalid('price') || invalid('availableCopies')) {
+    <small class="field-error"
+      >Year must be between 1450 and 2100; price and copies cannot be negative.</small
+    >
+  }
+
+  <div class="actions">
+    <button type="submit" class="button primary" [disabled]="feedback.busy()">Save</button>
+    <a class="button ghost" [routerLink]="id() ? ['/books', id()] : ['/books']">Cancel</a>
+  </div>
+</form>

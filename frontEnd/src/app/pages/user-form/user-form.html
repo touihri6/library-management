@@ -1,0 +1,68 @@
+<header class="page-header">
+  <div>
+    <h1>New user</h1>
+    <p class="muted">Creates the account in Keycloak with the chosen role.</p>
+  </div>
+</header>
+
+<app-alerts [feedback]="feedback" />
+
+<form class="card form" [formGroup]="form" (ngSubmit)="save()">
+  <div class="row">
+    <div class="field">
+      <label for="firstName">First name</label>
+      <input id="firstName" type="text" formControlName="firstName" />
+    </div>
+    <div class="field">
+      <label for="lastName">Last name</label>
+      <input id="lastName" type="text" formControlName="lastName" />
+    </div>
+  </div>
+  @if (invalid('firstName') || invalid('lastName')) {
+    <small class="field-error">First and last names are required.</small>
+  }
+
+  <div class="row">
+    <div class="field">
+      <label for="email">E-mail</label>
+      <input id="email" type="email" formControlName="email" />
+    </div>
+    <div class="field">
+      <label for="role">Role</label>
+      <select id="role" formControlName="role">
+        @for (role of roles; track role) {
+          <option [value]="role">{{ label(role) }}</option>
+        }
+      </select>
+    </div>
+  </div>
+  @if (invalid('email')) {
+    <small class="field-error">Enter a valid e-mail address.</small>
+  }
+
+  <div class="row">
+    <div class="field">
+      <label for="username">Username</label>
+      <input id="username" type="text" formControlName="username" autocomplete="off" />
+    </div>
+    <div class="field">
+      <label for="password">Initial password</label>
+      <input id="password" type="password" formControlName="password" autocomplete="new-password" />
+    </div>
+  </div>
+  @if (invalid('username')) {
+    <small class="field-error"
+      >3 to 50 characters: letters, digits, dots, dashes or underscores.</small
+    >
+  }
+  @if (invalid('password')) {
+    <small class="field-error">The password needs at least 8 characters.</small>
+  }
+
+  <div class="actions">
+    <button type="submit" class="button primary" [disabled]="feedback.busy()">
+      Create the user
+    </button>
+    <a class="button ghost" routerLink="/users">Cancel</a>
+  </div>
+</form>

@@ -1,0 +1,120 @@
+<p><a routerLink="/books">← Back to the catalog</a></p>
+
+<app-alerts [feedback]="feedback" />
+
+@if (details(); as details) {
+  @let book = details.book;
+  <header class="page-header">
+    <div>
+      <h1>{{ book.title }}</h1>
+      <p class="muted">{{ book.author }} · {{ label(book.genre) }}</p>
+    </div>
+    @if (auth.isStaff()) {
+      <div class="actions">
+        <a class="button" [routerLink]="['/books', book.id, 'edit']">Edit</a>
+        <button
+          type="button"
+          class="button danger"
+          [disabled]="feedback.busy()"
+          (click)="removeBook()"
+        >
+          Delete
+        </button>
+      </div>
+    }
+  </header>
+
+  <section class="card">
+    <dl class="details">
+      <dt>ISBN</dt>
+      <dd>{{ book.isbn }}</dd>
+      <dt>Published</dt>
+      <dd>{{ book.publicationYear ?? '—' }}</dd>
+      <dt>Price</dt>
+      <dd>{{ book.price | number: '1.2-2' }} TND</dd>
+      <dt>On the shelf</dt>
+      <dd>
+        <span class="badge" [class.open]="book.available" [class.closed]="!book.available">
+          {{ book.availableCopies }} cop{{ book.availableCopies === 1 ? 'y' : 'ies' }}
+        </span>
+      </dd>
+      <dt>Rating</dt>
+      <dd>
+        @if (details.rating && details.rating.count > 0) {
+          <span class="stars">{{ stars(details.rating.average) }}</span>
+          {{ details.rating.average | number: '1.1-1' }} / 5 ({{ details.rating.count }} review{{
+            details.rating.count === 1 ? '' : 's'
+          }})
+        } @else if (details.rating) {
+          No review yet
+        } @else {
+          <span class="muted">Ratings are unavailable right now</span>
+        }
+      </dd>
+    </dl>
+  </section>
+
+  <h2 class="section-title">Reviews</h2>
+
+  @if (auth.canReview()) {
+    <form class="card form" [formGroup]="reviewForm" (ngSubmit)="submitReview()">
+      <div class="row">
+        <div class="field">
+          <label for="reviewerName">Your name</label>
+          <input id="reviewerName" type="text" formControlName="reviewerName" />
+        </div>
+        <div class="field small">
+          <label for="rating">Rating</label>
+          <select id="rating" formControlName="rating">
+            @for (value of ratings; track value) {
+              <option [ngValue]="value">{{ value }} ★</option>
+            }
+          </select>
+        </div>
+      </div>
+      <label for="comment">Comment</label>
+      <textarea id="comment" rows="3" formControlName="comment"></textarea>
+      @if (reviewForm.touched && reviewForm.invalid) {
+        <small class="field-error"
+          >Your name is required and the comment is limited to 1000 characters.</small
+        >
+      }
+      <div class="actions">
+        <button type="submit" class="button primary" [disabled]="feedback.busy()">
+          Publish my review
+        </button>
+      </div>
+    </form>
+  } @else if (!auth.authenticated()) {
+    <p class="alert info">Sign in to write a review.</p>
+  }
+
+  <ul class="list">
+    @for (review of reviews(); track review.id) {
+      <li class="card list-item">
+        <div>
+          <strong>{{ review.reviewerName }}</strong>
+          <span class="stars">{{ stars(review.rating) }}</span>
+          <p class="meta">{{ review.createdAt | date: 'mediumDate' }}</p>
+          @if (review.comment) {
+            <p class="quote">{{ review.comment }}</p>
+          }
+        </div>
+        @if (auth.isStaff()) {
+          <button
+            type="button"
+            class="button small danger"
+            [disabled]="feedback.busy()"
+            (click)="removeReview(review)"
+          >
+            Delete
+          </button>
+        }
+      </li>
+    } @empty {
+      <li class="empty">Be the first to review this book.</li>
+    }
+  </ul>
+} @else if (!feedback.error()) {
+  <p class="muted">Loading the book…</p>
+}

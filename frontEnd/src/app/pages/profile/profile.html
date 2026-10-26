@@ -1,0 +1,28 @@
+<header class="page-header">
+  <div>
+    <h1>My account</h1>
+    <p class="muted">Your identity comes from Keycloak; your profile is kept by user-service.</p>
+  </div>
+  <button type="button" class="button" (click)="auth.logout()">Sign out</button>
+</header>
+
+<app-alerts [feedback]="feedback" />
+
+@if (user(); as user) {
+  <section class="card">
+    <dl class="details">
+      <dt>Username</dt>
+      <dd>{{ user.username }}</dd>
+      <dt>Name</dt>
+      <dd>{{ user.firstName }} {{ user.lastName }}</dd>
+      <dt>E-mail</dt>
+      <dd>{{ user.email ?? '—' }}</dd>
+      <dt>Role</dt>
+      <dd>{{ label(user.role) }}</dd>
+      <dt>Member since</dt>
+      <dd>{{ user.createdAt | date: 'longDate' }}</dd>
+    </dl>
+  </section>
+} @else if (!feedback.error()) {
+  <p class="muted">Loading your account…</p>
+}

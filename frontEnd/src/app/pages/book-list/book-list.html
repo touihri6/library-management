@@ -1,0 +1,71 @@
+<header class="page-header">
+  <div>
+    <h1>Catalog</h1>
+    <p class="muted">Browse the books of the library and check which ones can be borrowed.</p>
+  </div>
+  @if (auth.isStaff()) {
+    <a class="button primary" routerLink="/books/new">New book</a>
+  }
+</header>
+
+<app-alerts [feedback]="feedback" />
+
+<div class="toolbar">
+  <form class="select grow" (submit)="$event.preventDefault(); search(authorInput.value)">
+    <input #authorInput type="search" placeholder="Search by author" [value]="author()" />
+    <button type="submit" class="button">Search</button>
+  </form>
+  <label class="select">
+    <span>Genre</span>
+    <select (change)="setGenre($any($event.target).value)">
+      <option value="">All genres</option>
+      @for (genre of genres; track genre) {
+        <option [value]="genre">{{ label(genre) }}</option>
+      }
+    </select>
+  </label>
+</div>
+
+@if (loading()) {
+  <p class="muted">Loading books…</p>
+} @else {
+  <ul class="card-grid">
+    @for (book of page()?.content; track book.id) {
+      <li class="card">
+        <div class="card-head">
+          <h2>
+            <a [routerLink]="['/books', book.id]">{{ book.title }}</a>
+          </h2>
+          <span class="badge" [class.open]="book.available" [class.closed]="!book.available">
+            {{ book.available ? 'Available' : 'Unavailable' }}
+          </span>
+        </div>
+        <p class="meta">
+          {{ book.author }} · {{ label(book.genre) }}
+          @if (book.publicationYear) {
+            · {{ book.publicationYear }}
+          }
+        </p>
+        <p class="meta">
+          {{ book.availableCopies }} cop{{ book.availableCopies === 1 ? 'y' : 'ies' }} on the shelf
+        </p>
+        @if (auth.isStaff()) {
+          <div class="actions">
+            <a class="button small" [routerLink]="['/books', book.id, 'edit']">Edit</a>
+            <button
+              type="button"
+              class="button small danger"
+              [disabled]="feedback.busy()"
+              (click)="remove(book)"
+            >
+              Delete
+            </button>
+          </div>
+        }
+      </li>
+    } @empty {
+      <li class="empty">No book matches these filters.</li>
+    }
+  </ul>
+  <app-pager [page]="page()" (pageChange)="load($event)" />
+}
