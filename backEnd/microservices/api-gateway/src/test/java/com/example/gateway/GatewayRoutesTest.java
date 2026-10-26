@@ -36,7 +36,8 @@ class GatewayRoutesTest {
                 "review-service", "lb://REVIEW-SERVICE",
                 "event-service", "lb://EVENT-SERVICE",
                 "author-service", "lb://AUTHOR-SERVICE",
-                "notification-service", "lb://NOTIFICATION-SERVICE"));
+                "notification-service", "lb://NOTIFICATION-SERVICE",
+                "user-service", "lb://USER-SERVICE"));
     }
 
     @Test

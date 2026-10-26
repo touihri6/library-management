@@ -1,3 +1,5 @@
+name: library-management
+
 services:
   rabbitmq:
     image: rabbitmq:4.3-management
@@ -11,6 +13,18 @@ services:
       RABBITMQ_DEFAULT_PASS: library
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.7
+    container_name: library-keycloak
+    command: start-dev --import-realm
+    ports:
+      - "8180:8080"
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import:ro
 
 volumes:
   rabbitmq-data:

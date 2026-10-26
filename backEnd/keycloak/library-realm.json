@@ -1,0 +1,86 @@
+{
+  "realm": "library",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "accessTokenLifespan": 300,
+  "roles": {
+    "realm": [
+      { "name": "ADMIN", "description": "Administrator: full access, manages users and roles" },
+      { "name": "LIBRARIAN", "description": "Librarian: manages the catalog, members, loans and events" },
+      { "name": "MEMBER", "description": "Library member: reads the catalog and writes reviews" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "library-front",
+      "name": "Library front-end",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://localhost:4200/*"],
+      "webOrigins": ["http://localhost:4200"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:4200/*"
+      }
+    },
+    {
+      "clientId": "user-service",
+      "name": "user-service (Keycloak Admin API)",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "user-service-secret",
+      "protocol": "openid-connect",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": true
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Amine",
+      "lastName": "Admin",
+      "email": "admin@library.tn",
+      "credentials": [{ "type": "password", "value": "admin", "temporary": false }],
+      "realmRoles": ["ADMIN"]
+    },
+    {
+      "username": "librarian",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Sara",
+      "lastName": "Librarian",
+      "email": "librarian@library.tn",
+      "credentials": [{ "type": "password", "value": "librarian", "temporary": false }],
+      "realmRoles": ["LIBRARIAN"]
+    },
+    {
+      "username": "member",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Youssef",
+      "lastName": "Member",
+      "email": "member@library.tn",
+      "credentials": [{ "type": "password", "value": "member", "temporary": false }],
+      "realmRoles": ["MEMBER"]
+    },
+    {
+      "username": "service-account-user-service",
+      "enabled": true,
+      "serviceAccountClientId": "user-service",
+      "clientRoles": {
+        "realm-management": ["manage-users", "view-users", "query-users", "view-realm"]
+      }
+    }
+  ]
+}
