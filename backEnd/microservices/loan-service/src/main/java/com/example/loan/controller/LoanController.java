@@ -85,10 +85,11 @@ public class LoanController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update a loan (book, member and dates)")
+    @Operation(summary = "Update a loan (member and dates, the book cannot be changed)")
     @ApiResponse(responseCode = "200", description = "Loan updated")
     @ApiResponse(responseCode = "400", description = "Invalid payload or dueDate not after loanDate")
     @ApiResponse(responseCode = "404", description = "Loan, book or member not found")
+    @ApiResponse(responseCode = "409", description = "bookId differs from the loan's book")
     @ApiResponse(responseCode = "503", description = "book-service or member-service unavailable")
     public LoanResponse update(@PathVariable Long id, @Valid @RequestBody LoanRequest request) {
         return loanService.update(id, request);

@@ -12,6 +12,7 @@ import com.example.loan.exception.InvalidDatesException;
 import com.example.loan.exception.InvalidOperationException;
 import com.example.loan.exception.ResourceNotFoundException;
 import com.example.loan.mapper.LoanMapper;
+import com.example.loan.messaging.LoanEventPublisher;
 import com.example.loan.model.entity.Loan;
 import com.example.loan.model.enums.LoanStatus;
 import com.example.loan.repository.LoanRepository;
@@ -31,13 +32,16 @@ public class LoanServiceImpl implements LoanService {
     private final LoanMapper loanMapper;
     private final BookClient bookClient;
     private final MemberClient memberClient;
+    private final LoanEventPublisher loanEventPublisher;
 
     public LoanServiceImpl(LoanRepository loanRepository, LoanMapper loanMapper,
-                           BookClient bookClient, MemberClient memberClient) {
+                           BookClient bookClient, MemberClient memberClient,
+                           LoanEventPublisher loanEventPublisher) {
         this.loanRepository = loanRepository;
         this.loanMapper = loanMapper;
         this.bookClient = bookClient;
         this.memberClient = memberClient;
+        this.loanEventPublisher = loanEventPublisher;
     }
 
     @Override
@@ -70,13 +74,18 @@ public class LoanServiceImpl implements LoanService {
         }
         Loan loan = loanMapper.toEntity(request);
         loan.setStatus(LoanStatus.ONGOING);
-        return loanMapper.toResponse(loanRepository.save(loan));
+        Loan saved = loanRepository.save(loan);
+        loanEventPublisher.publishLoanCreated(saved);
+        return loanMapper.toResponse(saved);
     }
 
     @Override
     @Transactional
     public LoanResponse update(Long id, LoanRequest request) {
         Loan loan = getLoanOrThrow(id);
+        if (!loan.getBookId().equals(request.bookId())) {
+            throw new InvalidOperationException("The book of loan " + id + " cannot be changed");
+        }
         checkDates(request);
         getMemberOrThrow(request.memberId());
         getBookOrThrow(request.bookId());
@@ -93,13 +102,19 @@ public class LoanServiceImpl implements LoanService {
         }
         loan.setReturnDate(LocalDate.now());
         loan.setStatus(LoanStatus.RETURNED);
-        return loanMapper.toResponse(loanRepository.saveAndFlush(loan));
+        Loan saved = loanRepository.saveAndFlush(loan);
+        loanEventPublisher.publishLoanReturned(saved);
+        return loanMapper.toResponse(saved);
     }
 
     @Override
     @Transactional
     public void delete(Long id) {
-        loanRepository.delete(getLoanOrThrow(id));
+        Loan loan = getLoanOrThrow(id);
+        loanRepository.delete(loan);
+        if (loan.getStatus() != LoanStatus.RETURNED) {
+            loanEventPublisher.publishLoanCancelled(loan);
+        }
     }
 
     private void checkDates(LoanRequest request) {

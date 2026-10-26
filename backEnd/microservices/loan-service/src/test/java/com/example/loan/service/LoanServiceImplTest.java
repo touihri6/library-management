@@ -10,6 +10,7 @@ import com.example.loan.exception.InvalidOperationException;
 import com.example.loan.exception.ResourceNotFoundException;
 import com.example.loan.mapper.LoanMapper;
 import com.example.loan.mapper.LoanMapperImpl;
+import com.example.loan.messaging.LoanEventPublisher;
 import com.example.loan.model.entity.Loan;
 import com.example.loan.model.enums.LoanStatus;
 import com.example.loan.repository.LoanRepository;
@@ -32,6 +33,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,13 +48,16 @@ class LoanServiceImplTest {
     @Mock
     private MemberClient memberClient;
 
+    @Mock
+    private LoanEventPublisher loanEventPublisher;
+
     private final LoanMapper loanMapper = new LoanMapperImpl();
 
     private LoanService loanService;
 
     @BeforeEach
     void setUp() {
-        loanService = new LoanServiceImpl(loanRepository, loanMapper, bookClient, memberClient);
+        loanService = new LoanServiceImpl(loanRepository, loanMapper, bookClient, memberClient, loanEventPublisher);
     }
 
     @Test
@@ -68,6 +73,47 @@ class LoanServiceImplTest {
 
         assertThat(response.status()).isEqualTo(LoanStatus.ONGOING);
         assertThat(response.returnDate()).isNull();
+        verify(loanEventPublisher).publishLoanCreated(any(Loan.class));
+    }
+
+    @Test
+    void update_withDifferentBook_throwsInvalidOperation() {
+        Loan loan = new Loan();
+        loan.setId(1L);
+        loan.setBookId(1L);
+        when(loanRepository.findById(1L)).thenReturn(Optional.of(loan));
+        LoanRequest request = new LoanRequest(2L, 2L, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 15));
+
+        assertThatThrownBy(() -> loanService.update(1L, request))
+                .isInstanceOf(InvalidOperationException.class)
+                .hasMessage("The book of loan 1 cannot be changed");
+        verify(loanRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void delete_ongoing_publishesLoanCancelled() {
+        Loan loan = new Loan();
+        loan.setId(1L);
+        loan.setStatus(LoanStatus.ONGOING);
+        when(loanRepository.findById(1L)).thenReturn(Optional.of(loan));
+
+        loanService.delete(1L);
+
+        verify(loanRepository).delete(loan);
+        verify(loanEventPublisher).publishLoanCancelled(loan);
+    }
+
+    @Test
+    void delete_returned_doesNotPublish() {
+        Loan loan = new Loan();
+        loan.setId(4L);
+        loan.setStatus(LoanStatus.RETURNED);
+        when(loanRepository.findById(4L)).thenReturn(Optional.of(loan));
+
+        loanService.delete(4L);
+
+        verify(loanRepository).delete(loan);
+        verifyNoInteractions(loanEventPublisher);
     }
 
     @Test
@@ -77,6 +123,7 @@ class LoanServiceImplTest {
         assertThatThrownBy(() -> loanService.create(request))
                 .isInstanceOf(InvalidDatesException.class);
         verify(loanRepository, never()).save(any());
+        verifyNoInteractions(loanEventPublisher);
     }
 
     @Test
@@ -88,6 +135,7 @@ class LoanServiceImplTest {
 
         assertThatThrownBy(() -> loanService.returnLoan(4L))
                 .isInstanceOf(InvalidOperationException.class);
+        verifyNoInteractions(loanEventPublisher);
     }
 
     @Test
@@ -102,6 +150,7 @@ class LoanServiceImplTest {
 
         assertThat(response.status()).isEqualTo(LoanStatus.RETURNED);
         assertThat(response.returnDate()).isEqualTo(LocalDate.now());
+        verify(loanEventPublisher).publishLoanReturned(loan);
     }
 
     @Test
@@ -112,6 +161,7 @@ class LoanServiceImplTest {
         assertThatThrownBy(() -> loanService.create(request))
                 .isInstanceOf(InvalidOperationException.class);
         verify(loanRepository, never()).save(any());
+        verifyNoInteractions(loanEventPublisher);
     }
 
     @Test

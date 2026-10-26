@@ -4,6 +4,8 @@ import com.example.loan.client.BookClient;
 import com.example.loan.client.MemberClient;
 import com.example.loan.dto.BookResponse;
 import com.example.loan.dto.MemberResponse;
+import com.example.loan.messaging.LoanEventPublisher;
+import com.example.loan.model.entity.Loan;
 import feign.FeignException;
 import feign.Request;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,11 +23,16 @@ import java.time.LocalDate;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.startsWith;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -57,6 +64,9 @@ class LoanControllerIntegrationTest {
 
     @MockitoBean
     private MemberClient memberClient;
+
+    @MockitoBean
+    private LoanEventPublisher loanEventPublisher;
 
     @BeforeEach
     void setUp() {
@@ -94,6 +104,7 @@ class LoanControllerIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(header().exists("Location"))
                 .andExpect(jsonPath("$.status").value("ONGOING"));
+        verify(loanEventPublisher).publishLoanCreated(any(Loan.class));
     }
 
     @Test
@@ -120,6 +131,7 @@ class LoanControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("RETURNED"))
                 .andExpect(jsonPath("$.returnDate").value(LocalDate.now().toString()));
+        verify(loanEventPublisher).publishLoanReturned(any(Loan.class));
     }
 
     @Test
@@ -127,6 +139,28 @@ class LoanControllerIntegrationTest {
         mockMvc.perform(patch("/api/v1/loans/4/return"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.title").value("Invalid operation"));
+        verifyNoInteractions(loanEventPublisher);
+    }
+
+    @Test
+    void update_withDifferentBook_returns409() throws Exception {
+        mockMvc.perform(put("/api/v1/loans/1").contentType(MediaType.APPLICATION_JSON).content(NEW_LOAN))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("The book of loan 1 cannot be changed"));
+    }
+
+    @Test
+    void delete_ongoingLoan_returns204AndPublishesCancelled() throws Exception {
+        mockMvc.perform(delete("/api/v1/loans/1"))
+                .andExpect(status().isNoContent());
+        verify(loanEventPublisher).publishLoanCancelled(any(Loan.class));
+    }
+
+    @Test
+    void delete_returnedLoan_returns204WithoutEvent() throws Exception {
+        mockMvc.perform(delete("/api/v1/loans/4"))
+                .andExpect(status().isNoContent());
+        verifyNoInteractions(loanEventPublisher);
     }
 
     @Test
