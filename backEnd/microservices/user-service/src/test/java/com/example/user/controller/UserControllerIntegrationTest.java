@@ -1,7 +1,13 @@
 package com.example.user.controller;
 
+import com.example.user.client.LoanClient;
+import com.example.user.client.MemberClient;
+import com.example.user.dto.LoanSummary;
+import com.example.user.dto.MemberSummary;
+import com.example.user.dto.PageResponse;
 import com.example.user.keycloak.KeycloakAdminClient;
 import com.example.user.security.KeycloakRealmRoleConverter;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -12,10 +18,13 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.startsWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -50,6 +59,61 @@ class UserControllerIntegrationTest {
 
     @MockitoBean
     private KeycloakAdminClient keycloakAdminClient;
+
+    @MockitoBean
+    private MemberClient memberClient;
+
+    @MockitoBean
+    private LoanClient loanClient;
+
+    @BeforeEach
+    void setUp() {
+        when(memberClient.findByEmail(anyString(), anyInt())).thenReturn(new PageResponse<>(List.of(), 0, 1, 0, 0, true));
+    }
+
+    @Test
+    void register_alsoCreatesTheLibraryMember() throws Exception {
+        when(keycloakAdminClient.createUser(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenReturn("44444444-4444-4444-4444-444444444444");
+
+        mockMvc.perform(post("/api/v1/users/register").contentType(MediaType.APPLICATION_JSON).content(REGISTER))
+                .andExpect(status().isCreated());
+        verify(memberClient).create(any());
+    }
+
+    @Test
+    void myLoans_returnsTheLinkedMemberAndTheirLoans() throws Exception {
+        when(memberClient.findByEmail("member@library.tn", 1)).thenReturn(new PageResponse<>(List.of(
+                new MemberSummary(7L, "Youssef", "Member", "member@library.tn", "STANDARD")), 0, 1, 1, 1, true));
+        when(loanClient.findByMember(7L, 100)).thenReturn(new PageResponse<>(List.of(
+                new LoanSummary(1L, 3L, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 15), null, "ONGOING")),
+                0, 100, 1, 1, true));
+
+        mockMvc.perform(get("/api/v1/users/me/loans").with(jwt().jwt(token -> token
+                        .subject("33333333-3333-3333-3333-333333333333")
+                        .claim("email", "member@library.tn")
+                        .claim("realm_access", Map.of("roles", List.of("MEMBER"))))
+                        .authorities(new KeycloakRealmRoleConverter())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.member.id").value(7))
+                .andExpect(jsonPath("$.loans[0].status").value("ONGOING"));
+    }
+
+    @Test
+    void myLoans_withoutLinkedMember_returns404() throws Exception {
+        mockMvc.perform(get("/api/v1/users/me/loans").with(jwt().jwt(token -> token
+                        .claim("email", "nobody@mail.com")
+                        .claim("realm_access", Map.of("roles", List.of("MEMBER"))))
+                        .authorities(new KeycloakRealmRoleConverter())))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value("No library member is linked to nobody@mail.com"));
+    }
+
+    @Test
+    void myLoans_withoutToken_returns401() throws Exception {
+        mockMvc.perform(get("/api/v1/users/me/loans"))
+                .andExpect(status().isUnauthorized());
+    }
 
     private static RequestPostProcessor as(String username, String subject, String... roles) {
         return jwt().jwt(token -> token.subject(subject)

@@ -1,5 +1,6 @@
 package com.example.author.service;
 
+import com.example.author.dto.AuthorBooks;
 import com.example.author.dto.AuthorRequest;
 import com.example.author.dto.AuthorResponse;
 import com.example.author.dto.PageResponse;
@@ -10,6 +11,8 @@ public interface AuthorService {
     PageResponse<AuthorResponse> findAll(String lastName, String nationality, Pageable pageable);
 
     AuthorResponse findById(Long id);
+
+    AuthorBooks findBooks(Long id);
 
     AuthorResponse create(AuthorRequest request);
 

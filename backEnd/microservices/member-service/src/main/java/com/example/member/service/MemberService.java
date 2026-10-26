@@ -1,5 +1,6 @@
 package com.example.member.service;
 
+import com.example.member.dto.MemberLoans;
 import com.example.member.dto.MemberRequest;
 import com.example.member.dto.MemberResponse;
 import com.example.member.dto.PageResponse;
@@ -8,9 +9,11 @@ import org.springframework.data.domain.Pageable;
 
 public interface MemberService {
 
-    PageResponse<MemberResponse> findAll(String lastName, MembershipType membershipType, Pageable pageable);
+    PageResponse<MemberResponse> findAll(String lastName, MembershipType membershipType, String email, Pageable pageable);
 
     MemberResponse findById(Long id);
+
+    MemberLoans findLoans(Long id);
 
     MemberResponse create(MemberRequest request);
 

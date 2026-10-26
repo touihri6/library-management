@@ -1,5 +1,6 @@
 package com.example.user.service;
 
+import com.example.user.dto.MyLoans;
 import com.example.user.dto.PageResponse;
 import com.example.user.dto.RegisterRequest;
 import com.example.user.dto.UserCreateRequest;
@@ -15,6 +16,8 @@ public interface UserService {
     UserResponse create(UserCreateRequest request);
 
     UserResponse me(Jwt jwt);
+
+    MyLoans myLoans(Jwt jwt);
 
     PageResponse<UserResponse> findAll(UserRole role, Pageable pageable);
 

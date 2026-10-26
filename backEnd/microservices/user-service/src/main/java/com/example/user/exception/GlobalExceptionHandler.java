@@ -1,5 +1,6 @@
 package com.example.user.exception;
 
+import feign.FeignException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpHeaders;
@@ -33,6 +34,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(IdentityProviderException.class)
     public ProblemDetail handleIdentityProvider(IdentityProviderException ex) {
         return problem(HttpStatus.BAD_GATEWAY, "Identity provider error", ex.getMessage());
+    }
+
+    @ExceptionHandler(FeignException.class)
+    public ProblemDetail handleRemoteServiceError(FeignException ex) {
+        return problem(HttpStatus.SERVICE_UNAVAILABLE, "Service unavailable",
+                "member-service or loan-service is unavailable");
     }
 
     @ExceptionHandler({PropertyReferenceException.class, InvalidDataAccessApiUsageException.class})

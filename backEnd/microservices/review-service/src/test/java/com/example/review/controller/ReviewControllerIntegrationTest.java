@@ -1,15 +1,23 @@
 package com.example.review.controller;
 
+import com.example.review.client.BookClient;
+import feign.FeignException;
+import feign.Request;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+
 import static org.hamcrest.Matchers.startsWith;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -34,6 +42,32 @@ class ReviewControllerIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private BookClient bookClient;
+
+    private static Request request(String url) {
+        return Request.create(Request.HttpMethod.GET, url, Map.of(), null, StandardCharsets.UTF_8, null);
+    }
+
+    @Test
+    void create_forUnknownBook_returns404() throws Exception {
+        when(bookClient.findById(4L)).thenThrow(new FeignException.NotFound("404", request("/api/v1/books/4"), null, Map.of()));
+
+        mockMvc.perform(post("/api/v1/reviews").contentType(MediaType.APPLICATION_JSON).content(NEW_REVIEW))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value("Book 4 not found"));
+    }
+
+    @Test
+    void create_whenBookServiceDown_returns503() throws Exception {
+        when(bookClient.findById(4L))
+                .thenThrow(new FeignException.ServiceUnavailable("503", request("/api/v1/books/4"), null, Map.of()));
+
+        mockMvc.perform(post("/api/v1/reviews").contentType(MediaType.APPLICATION_JSON).content(NEW_REVIEW))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.detail").value("book-service is unavailable"));
+    }
 
     @Test
     void list_filteredByBookId() throws Exception {

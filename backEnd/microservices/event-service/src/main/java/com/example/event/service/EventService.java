@@ -1,5 +1,6 @@
 package com.example.event.service;
 
+import com.example.event.dto.AnnouncementResponse;
 import com.example.event.dto.EventRequest;
 import com.example.event.dto.EventResponse;
 import com.example.event.dto.PageResponse;
@@ -17,4 +18,6 @@ public interface EventService {
     EventResponse update(Long id, EventRequest request);
 
     void delete(Long id);
+
+    AnnouncementResponse announce(Long id);
 }

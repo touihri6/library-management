@@ -1,18 +1,33 @@
 package com.example.event.controller;
 
+import com.example.event.client.MemberClient;
+import com.example.event.client.NotificationClient;
+import com.example.event.dto.MemberContact;
+import com.example.event.dto.PageResponse;
+import feign.FeignException;
+import feign.Request;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Map;
 
 import static org.hamcrest.Matchers.startsWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -29,6 +44,44 @@ class EventControllerIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private MemberClient memberClient;
+
+    @MockitoBean
+    private NotificationClient notificationClient;
+
+    @Test
+    void announce_notifiesEveryMember() throws Exception {
+        when(memberClient.findAll(0, 100)).thenReturn(new PageResponse<>(List.of(
+                new MemberContact(1L, "Amine", "Ben Ali", "amine@mail.com"),
+                new MemberContact(2L, "Nour", "Haddad", "nour@mail.com")), 0, 100, 2, 1, true));
+
+        mockMvc.perform(post("/api/v1/events/1/announce"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.eventId").value(1))
+                .andExpect(jsonPath("$.recipients").value(2))
+                .andExpect(jsonPath("$.sent").value(2))
+                .andExpect(jsonPath("$.failed").value(0));
+        verify(notificationClient, times(2)).create(any());
+    }
+
+    @Test
+    void announce_whenMemberServiceDown_returns503() throws Exception {
+        Request request = Request.create(Request.HttpMethod.GET, "/api/v1/members", Map.of(), null, StandardCharsets.UTF_8, null);
+        when(memberClient.findAll(anyInt(), anyInt()))
+                .thenThrow(new FeignException.ServiceUnavailable("503", request, null, Map.of()));
+
+        mockMvc.perform(post("/api/v1/events/1/announce"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.detail").value("member-service is unavailable"));
+    }
+
+    @Test
+    void announce_unknownEvent_returns404() throws Exception {
+        mockMvc.perform(post("/api/v1/events/999/announce"))
+                .andExpect(status().isNotFound());
+    }
 
     private static String event(LocalDateTime date, int capacity) {
         return """

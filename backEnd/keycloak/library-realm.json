@@ -8,7 +8,8 @@
     "realm": [
       { "name": "ADMIN", "description": "Administrator: full access, manages users and roles" },
       { "name": "LIBRARIAN", "description": "Librarian: manages the catalog, members, loans and events" },
-      { "name": "MEMBER", "description": "Library member: reads the catalog and writes reviews" }
+      { "name": "MEMBER", "description": "Library member: reads the catalog and writes reviews" },
+      { "name": "SERVICE", "description": "Microservice account: service-to-service calls only" }
     ]
   },
   "clients": [
@@ -78,6 +79,7 @@
       "username": "service-account-user-service",
       "enabled": true,
       "serviceAccountClientId": "user-service",
+      "realmRoles": ["SERVICE"],
       "clientRoles": {
         "realm-management": ["manage-users", "view-users", "query-users", "view-realm"]
       }

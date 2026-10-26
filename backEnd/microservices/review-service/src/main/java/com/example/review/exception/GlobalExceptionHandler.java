@@ -1,5 +1,6 @@
 package com.example.review.exception;
 
+import feign.FeignException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpHeaders;
@@ -23,6 +24,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ResourceNotFoundException.class)
     public ProblemDetail handleNotFound(ResourceNotFoundException ex) {
         return problem(HttpStatus.NOT_FOUND, "Resource not found", ex.getMessage());
+    }
+
+    @ExceptionHandler(FeignException.class)
+    public ProblemDetail handleRemoteServiceError(FeignException ex) {
+        return problem(HttpStatus.SERVICE_UNAVAILABLE, "Service unavailable", "book-service is unavailable");
     }
 
     @ExceptionHandler({PropertyReferenceException.class, InvalidDataAccessApiUsageException.class})

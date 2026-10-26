@@ -1,15 +1,26 @@
 package com.example.member.controller;
 
+import com.example.member.client.LoanClient;
+import com.example.member.dto.LoanSummary;
+import com.example.member.dto.PageResponse;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.util.List;
+
 import static org.hamcrest.Matchers.startsWith;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -37,6 +48,46 @@ class MemberControllerIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private LoanClient loanClient;
+
+    @BeforeEach
+    void setUp() {
+        when(loanClient.findByMember(anyLong(), anyInt())).thenReturn(new PageResponse<>(List.of(), 0, 100, 0, 0, true));
+    }
+
+    private static PageResponse<LoanSummary> ongoingLoan() {
+        return new PageResponse<>(List.of(new LoanSummary(10L, 1L, LocalDate.of(2026, 10, 1),
+                LocalDate.of(2026, 10, 15), null, "ONGOING")), 0, 100, 1, 1, true);
+    }
+
+    @Test
+    void list_filteredByEmail_ignoresCase() throws Exception {
+        mockMvc.perform(get("/api/v1/members").param("email", "AMINE@mail.com"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].lastName").value("Ben Ali"));
+    }
+
+    @Test
+    void loans_returnsMemberWithLoansFromLoanService() throws Exception {
+        when(loanClient.findByMember(1L, 100)).thenReturn(ongoingLoan());
+
+        mockMvc.perform(get("/api/v1/members/1/loans"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.member.email").value("amine@mail.com"))
+                .andExpect(jsonPath("$.loans[0].status").value("ONGOING"));
+    }
+
+    @Test
+    void delete_memberWithOngoingLoan_returns409() throws Exception {
+        when(loanClient.findByMember(1L, 100)).thenReturn(ongoingLoan());
+
+        mockMvc.perform(delete("/api/v1/members/1"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Member 1 still has 1 ongoing loan(s)"));
+    }
 
     @Test
     void list_filteredByMembershipType() throws Exception {

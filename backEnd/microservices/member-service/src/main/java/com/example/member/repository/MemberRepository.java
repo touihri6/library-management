@@ -18,8 +18,10 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
             select m from Member m
             where (:lastName is null or lower(m.lastName) like lower(concat('%', cast(:lastName as string), '%')))
               and (:membershipType is null or m.membershipType = :membershipType)
+              and (:email is null or lower(m.email) = lower(cast(:email as string)))
             """)
     Page<Member> search(@Param("lastName") String lastName,
                         @Param("membershipType") MembershipType membershipType,
+                        @Param("email") String email,
                         Pageable pageable);
 }

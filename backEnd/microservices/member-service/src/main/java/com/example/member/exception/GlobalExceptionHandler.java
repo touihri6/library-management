@@ -1,5 +1,6 @@
 package com.example.member.exception;
 
+import feign.FeignException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpHeaders;
@@ -28,6 +29,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(DuplicateResourceException.class)
     public ProblemDetail handleDuplicate(DuplicateResourceException ex) {
         return problem(HttpStatus.CONFLICT, "Duplicate resource", ex.getMessage());
+    }
+
+    @ExceptionHandler(InvalidOperationException.class)
+    public ProblemDetail handleInvalidOperation(InvalidOperationException ex) {
+        return problem(HttpStatus.CONFLICT, "Invalid operation", ex.getMessage());
+    }
+
+    @ExceptionHandler(FeignException.class)
+    public ProblemDetail handleRemoteServiceError(FeignException ex) {
+        return problem(HttpStatus.SERVICE_UNAVAILABLE, "Service unavailable", "loan-service is unavailable");
     }
 
     @ExceptionHandler({PropertyReferenceException.class, InvalidDataAccessApiUsageException.class})

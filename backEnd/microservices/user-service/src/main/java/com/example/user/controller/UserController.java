@@ -1,5 +1,6 @@
 package com.example.user.controller;
 
+import com.example.user.dto.MyLoans;
 import com.example.user.dto.PageResponse;
 import com.example.user.dto.RegisterRequest;
 import com.example.user.dto.RoleUpdateRequest;
@@ -63,6 +64,17 @@ public class UserController {
     @ApiResponse(responseCode = "401", description = "Missing or invalid token")
     public UserResponse me(@AuthenticationPrincipal Jwt jwt) {
         return userService.me(jwt);
+    }
+
+    @GetMapping("/me/loans")
+    @Operation(summary = "Get the loans of the authenticated user",
+            description = "The library member is found by e-mail in member-service, then the loans in loan-service, through OpenFeign")
+    @ApiResponse(responseCode = "200", description = "Linked member and their loans")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
+    @ApiResponse(responseCode = "404", description = "No library member is linked to this account")
+    @ApiResponse(responseCode = "503", description = "member-service or loan-service unavailable")
+    public MyLoans myLoans(@AuthenticationPrincipal Jwt jwt) {
+        return userService.myLoans(jwt);
     }
 
     @GetMapping

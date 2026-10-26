@@ -1,5 +1,6 @@
 package com.example.author.controller;
 
+import com.example.author.dto.AuthorBooks;
 import com.example.author.dto.AuthorRequest;
 import com.example.author.dto.AuthorResponse;
 import com.example.author.dto.PageResponse;
@@ -55,6 +56,15 @@ public class AuthorController {
         return authorService.findById(id);
     }
 
+    @GetMapping("/{id}/books")
+    @Operation(summary = "Get an author with their books", description = "Books are read from book-service through OpenFeign")
+    @ApiResponse(responseCode = "200", description = "Author and books found")
+    @ApiResponse(responseCode = "404", description = "Author not found")
+    @ApiResponse(responseCode = "503", description = "book-service unavailable")
+    public AuthorBooks findBooks(@PathVariable Long id) {
+        return authorService.findBooks(id);
+    }
+
     @PostMapping
     @Operation(summary = "Create an author")
     @ApiResponse(responseCode = "201", description = "Author created")
@@ -79,6 +89,8 @@ public class AuthorController {
     @Operation(summary = "Delete an author")
     @ApiResponse(responseCode = "204", description = "Author deleted")
     @ApiResponse(responseCode = "404", description = "Author not found")
+    @ApiResponse(responseCode = "409", description = "The author still has books in the catalog")
+    @ApiResponse(responseCode = "503", description = "book-service unavailable")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         authorService.delete(id);
         return ResponseEntity.noContent().build();

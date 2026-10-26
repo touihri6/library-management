@@ -1,10 +1,14 @@
 package com.example.author.security;
 
+import com.example.author.client.BookClient;
+import com.example.author.dto.PageResponse;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +17,9 @@ import java.util.List;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.startsWith;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -28,6 +35,21 @@ class SecurityRulesTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private BookClient bookClient;
+
+    @BeforeEach
+    void setUp() {
+        when(bookClient.findByAuthor(anyString(), anyInt()))
+                .thenReturn(new PageResponse<>(List.of(), 0, 100, 0, 0, true));
+    }
+
+    @Test
+    void anonymousCanReadTheBooksOfAnAuthor() throws Exception {
+        mockMvc.perform(get("/api/v1/authors/1/books"))
+                .andExpect(status().isOk());
+    }
 
     private static RequestPostProcessor as(String... roles) {
         return jwt().jwt(token -> token.claim("preferred_username", "user")

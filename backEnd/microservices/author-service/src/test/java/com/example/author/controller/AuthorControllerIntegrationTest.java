@@ -1,15 +1,29 @@
 package com.example.author.controller;
 
+import com.example.author.client.BookClient;
+import com.example.author.dto.BookSummary;
+import com.example.author.dto.PageResponse;
+import feign.FeignException;
+import feign.Request;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
+
 import static org.hamcrest.Matchers.startsWith;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -36,6 +50,49 @@ class AuthorControllerIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private BookClient bookClient;
+
+    @BeforeEach
+    void setUp() {
+        when(bookClient.findByAuthor(anyString(), anyInt()))
+                .thenReturn(new PageResponse<>(List.of(), 0, 100, 0, 0, true));
+    }
+
+    @Test
+    void books_returnsAuthorWithTheirBooksFromBookService() throws Exception {
+        when(bookClient.findByAuthor("Frank Herbert", 100)).thenReturn(new PageResponse<>(List.of(
+                new BookSummary(1L, "Dune", "Frank Herbert", "978-0441172719", "SCIENCE_FICTION", 1965, 4, true)),
+                0, 100, 1, 1, true));
+
+        mockMvc.perform(get("/api/v1/authors/1/books"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.author.lastName").value("Herbert"))
+                .andExpect(jsonPath("$.books[0].title").value("Dune"));
+    }
+
+    @Test
+    void books_whenBookServiceDown_returns503() throws Exception {
+        Request request = Request.create(Request.HttpMethod.GET, "/api/v1/books", Map.of(), null, StandardCharsets.UTF_8, null);
+        when(bookClient.findByAuthor(anyString(), anyInt()))
+                .thenThrow(new FeignException.ServiceUnavailable("503", request, null, Map.of()));
+
+        mockMvc.perform(get("/api/v1/authors/1/books"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.detail").value("book-service is unavailable"));
+    }
+
+    @Test
+    void delete_authorWithBooks_returns409() throws Exception {
+        when(bookClient.findByAuthor("Frank Herbert", 100)).thenReturn(new PageResponse<>(List.of(
+                new BookSummary(1L, "Dune", "Frank Herbert", "978-0441172719", "SCIENCE_FICTION", 1965, 4, true)),
+                0, 100, 1, 1, true));
+
+        mockMvc.perform(delete("/api/v1/authors/1"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Author 1 still has 1 book(s) in the catalog"));
+    }
 
     @Test
     void list_filteredByNationality() throws Exception {

@@ -62,9 +62,11 @@ public class ReviewController {
     }
 
     @PostMapping
-    @Operation(summary = "Create a review")
+    @Operation(summary = "Create a review", description = "The book is checked in book-service through OpenFeign")
     @ApiResponse(responseCode = "201", description = "Review created")
     @ApiResponse(responseCode = "400", description = "Invalid payload")
+    @ApiResponse(responseCode = "404", description = "Book not found")
+    @ApiResponse(responseCode = "503", description = "book-service unavailable")
     public ResponseEntity<ReviewResponse> create(@Valid @RequestBody ReviewRequest request) {
         ReviewResponse created = reviewService.create(request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -76,7 +78,8 @@ public class ReviewController {
     @Operation(summary = "Update a review (full replacement)")
     @ApiResponse(responseCode = "200", description = "Review updated")
     @ApiResponse(responseCode = "400", description = "Invalid payload")
-    @ApiResponse(responseCode = "404", description = "Review not found")
+    @ApiResponse(responseCode = "404", description = "Review or book not found")
+    @ApiResponse(responseCode = "503", description = "book-service unavailable")
     public ReviewResponse update(@PathVariable Long id, @Valid @RequestBody ReviewRequest request) {
         return reviewService.update(id, request);
     }

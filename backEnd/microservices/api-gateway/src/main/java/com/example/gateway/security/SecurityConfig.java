@@ -40,7 +40,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/members/**").hasAnyRole(LIBRARIAN, ADMIN)
                         .requestMatchers("/api/v1/loans/**").hasAnyRole(LIBRARIAN, ADMIN)
                         .requestMatchers(HttpMethod.POST, "/api/v1/users/register").permitAll()
-                        .requestMatchers("/api/v1/users/me").authenticated()
+                        .requestMatchers("/api/v1/users/me", "/api/v1/users/me/**").authenticated()
                         .requestMatchers("/api/v1/users/**").hasRole(ADMIN)
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2

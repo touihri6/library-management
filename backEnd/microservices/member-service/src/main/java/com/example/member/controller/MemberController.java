@@ -1,5 +1,6 @@
 package com.example.member.controller;
 
+import com.example.member.dto.MemberLoans;
 import com.example.member.dto.MemberRequest;
 import com.example.member.dto.MemberResponse;
 import com.example.member.dto.PageResponse;
@@ -40,12 +41,13 @@ public class MemberController {
     }
 
     @GetMapping
-    @Operation(summary = "List members", description = "Paginated list, optionally filtered by last name and/or membership type")
+    @Operation(summary = "List members", description = "Paginated list, optionally filtered by last name, membership type and/or e-mail")
     public PageResponse<MemberResponse> findAll(
             @Parameter(description = "Part of the last name (case-insensitive)") @RequestParam(required = false) String lastName,
             @Parameter(description = "Exact membership type") @RequestParam(required = false) MembershipType membershipType,
+            @Parameter(description = "Exact e-mail (case-insensitive)") @RequestParam(required = false) String email,
             @ParameterObject @PageableDefault(size = 20, sort = "lastName", direction = Sort.Direction.ASC) Pageable pageable) {
-        return memberService.findAll(lastName, membershipType, pageable);
+        return memberService.findAll(lastName, membershipType, email, pageable);
     }
 
     @GetMapping("/{id}")
@@ -54,6 +56,15 @@ public class MemberController {
     @ApiResponse(responseCode = "404", description = "Member not found")
     public MemberResponse findById(@PathVariable Long id) {
         return memberService.findById(id);
+    }
+
+    @GetMapping("/{id}/loans")
+    @Operation(summary = "Get a member with their loan history", description = "Loans are read from loan-service through OpenFeign")
+    @ApiResponse(responseCode = "200", description = "Member and loans found")
+    @ApiResponse(responseCode = "404", description = "Member not found")
+    @ApiResponse(responseCode = "503", description = "loan-service unavailable")
+    public MemberLoans findLoans(@PathVariable Long id) {
+        return memberService.findLoans(id);
     }
 
     @PostMapping
@@ -82,6 +93,8 @@ public class MemberController {
     @Operation(summary = "Delete a member")
     @ApiResponse(responseCode = "204", description = "Member deleted")
     @ApiResponse(responseCode = "404", description = "Member not found")
+    @ApiResponse(responseCode = "409", description = "The member still has ongoing loans")
+    @ApiResponse(responseCode = "503", description = "loan-service unavailable")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         memberService.delete(id);
         return ResponseEntity.noContent().build();

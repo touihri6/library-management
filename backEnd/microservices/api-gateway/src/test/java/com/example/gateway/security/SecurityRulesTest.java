@@ -97,6 +97,7 @@ class SecurityRulesTest {
     @Test
     void anyAuthenticatedUserCanReadOwnAccount() {
         expectRouted(get("/api/v1/users/me").with(as("MEMBER")));
+        expectRouted(get("/api/v1/users/me/loans").with(as("MEMBER")));
     }
 
     @Test

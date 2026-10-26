@@ -1,5 +1,6 @@
 package com.example.event.controller;
 
+import com.example.event.dto.AnnouncementResponse;
 import com.example.event.dto.EventRequest;
 import com.example.event.dto.EventResponse;
 import com.example.event.dto.PageResponse;
@@ -82,5 +83,16 @@ public class EventController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         eventService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/announce")
+    @Operation(summary = "Announce an event to every member",
+            description = "Members are read from member-service and notifications sent to notification-service through OpenFeign")
+    @ApiResponse(responseCode = "200", description = "Announcement sent, with the number of notifications created")
+    @ApiResponse(responseCode = "404", description = "Event not found")
+    @ApiResponse(responseCode = "409", description = "The event is already over")
+    @ApiResponse(responseCode = "503", description = "member-service unavailable")
+    public AnnouncementResponse announce(@PathVariable Long id) {
+        return eventService.announce(id);
     }
 }

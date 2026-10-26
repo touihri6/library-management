@@ -66,4 +66,14 @@ class SecurityRulesTest {
         mockMvc.perform(delete("/api/v1/loans/1").with(as("LIBRARIAN")))
                 .andExpect(status().isNoContent());
     }
+
+    @Test
+    void serviceAccountCanOnlySearchLoans() throws Exception {
+        mockMvc.perform(get("/api/v1/loans").param("memberId", "1").with(as("SERVICE")))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/loans/1").with(as("SERVICE")))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/api/v1/loans/1").with(as("SERVICE")))
+                .andExpect(status().isForbidden());
+    }
 }
