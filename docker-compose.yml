@@ -1,0 +1,225 @@
+name: library-management
+
+x-spring-service: &spring-service
+  restart: on-failure
+  depends_on: &spring-depends
+    mysql:
+      condition: service_healthy
+    keycloak:
+      condition: service_healthy
+    eureka-server:
+      condition: service_started
+
+x-spring-env: &spring-env
+  SPRING_APPLICATION_JSON: '{"eureka":{"client":{"service-url":{"defaultZone":"http://eureka-server:8761/eureka"}}}}'
+  SPRING_DATASOURCE_USERNAME: root
+  SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+  SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://localhost:8180/realms/library
+  SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/library/protocol/openid-connect/certs
+  SPRING_RABBITMQ_HOST: rabbitmq
+  SPRING_RABBITMQ_PORT: 5672
+  SPRING_RABBITMQ_USERNAME: library
+  SPRING_RABBITMQ_PASSWORD: library
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: library-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  rabbitmq:
+    image: rabbitmq:4.3-management
+    container_name: library-rabbitmq
+    hostname: library-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: library
+      RABBITMQ_DEFAULT_PASS: library
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.7
+    container_name: library-keycloak
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: http://localhost:8180
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "8180:8080"
+    volumes:
+      - ./backEnd/keycloak:/opt/keycloak/data/import:ro
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '\"UP\"' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  eureka-server:
+    build: ./backEnd/microservices/eureka-server
+    image: library/eureka-server
+    container_name: library-eureka-server
+    restart: on-failure
+    ports:
+      - "8761:8761"
+
+  api-gateway:
+    <<: *spring-service
+    build: ./backEnd/microservices/api-gateway
+    image: library/api-gateway
+    container_name: library-api-gateway
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+    environment:
+      <<: *spring-env
+      EUREKA_INSTANCE_HOSTNAME: api-gateway
+    ports:
+      - "8080:8080"
+
+  book-service:
+    <<: *spring-service
+    build: ./backEnd/microservices/book-service
+    image: library/book-service
+    container_name: library-book-service
+    depends_on:
+      <<: *spring-depends
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      <<: *spring-env
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/bookdb?createDatabaseIfNotExist=true
+      EUREKA_INSTANCE_HOSTNAME: book-service
+    ports:
+      - "8081:8081"
+
+  member-service:
+    <<: *spring-service
+    build: ./backEnd/microservices/member-service
+    image: library/member-service
+    container_name: library-member-service
+    environment:
+      <<: *spring-env
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/memberdb?createDatabaseIfNotExist=true
+      EUREKA_INSTANCE_HOSTNAME: member-service
+    ports:
+      - "8082:8082"
+
+  loan-service:
+    <<: *spring-service
+    build: ./backEnd/microservices/loan-service
+    image: library/loan-service
+    container_name: library-loan-service
+    depends_on:
+      <<: *spring-depends
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      <<: *spring-env
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/loandb?createDatabaseIfNotExist=true
+      EUREKA_INSTANCE_HOSTNAME: loan-service
+    ports:
+      - "8083:8083"
+
+  review-service:
+    <<: *spring-service
+    build: ./backEnd/microservices/review-service
+    image: library/review-service
+    container_name: library-review-service
+    environment:
+      <<: *spring-env
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/reviewdb?createDatabaseIfNotExist=true
+      EUREKA_INSTANCE_HOSTNAME: review-service
+    ports:
+      - "8084:8084"
+
+  event-service:
+    <<: *spring-service
+    build: ./backEnd/microservices/event-service
+    image: library/event-service
+    container_name: library-event-service
+    environment:
+      <<: *spring-env
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/eventdb?createDatabaseIfNotExist=true
+      EUREKA_INSTANCE_HOSTNAME: event-service
+    ports:
+      - "8085:8085"
+
+  author-service:
+    <<: *spring-service
+    build: ./backEnd/microservices/author-service
+    image: library/author-service
+    container_name: library-author-service
+    environment:
+      <<: *spring-env
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/authordb?createDatabaseIfNotExist=true
+      EUREKA_INSTANCE_HOSTNAME: author-service
+    ports:
+      - "8086:8086"
+
+  notification-service:
+    build: ./backEnd/microservices/notification-service
+    image: library/notification-service
+    container_name: library-notification-service
+    restart: on-failure
+    depends_on:
+      eureka-server:
+        condition: service_started
+    environment:
+      PORT: 8087
+      EUREKA_SERVER: http://eureka-server:8761/eureka
+      INSTANCE_HOST: notification-service
+      INSTANCE_IP: notification-service
+    ports:
+      - "8087:8087"
+
+  user-service:
+    <<: *spring-service
+    build: ./backEnd/microservices/user-service
+    image: library/user-service
+    container_name: library-user-service
+    environment:
+      <<: *spring-env
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/userdb?createDatabaseIfNotExist=true
+      SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_TOKEN_URI: http://keycloak:8080/realms/library/protocol/openid-connect/token
+      KEYCLOAK_SERVER_URL: http://keycloak:8080
+      EUREKA_INSTANCE_HOSTNAME: user-service
+    ports:
+      - "8088:8088"
+
+  frontend:
+    build: ./frontEnd
+    image: library/frontend
+    container_name: library-frontend
+    restart: on-failure
+    depends_on:
+      - api-gateway
+    ports:
+      - "4200:80"
+
+volumes:
+  mysql-data:
+  rabbitmq-data:

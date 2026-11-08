@@ -4,7 +4,8 @@ import os
 from py_eureka_client import eureka_client
 
 APP_NAME = "notification-service"
-INSTANCE_HOST = "localhost"
+INSTANCE_HOST = os.getenv("INSTANCE_HOST", "localhost")
+INSTANCE_IP = os.getenv("INSTANCE_IP", "127.0.0.1")
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -23,7 +24,7 @@ async def start_eureka(port: int) -> None:
             app_name=APP_NAME,
             instance_id=f"{APP_NAME}:{port}",
             instance_host=INSTANCE_HOST,
-            instance_ip="127.0.0.1",
+            instance_ip=INSTANCE_IP,
             instance_port=port,
             home_page_url=f"{base_url}/",
             status_page_url=f"{base_url}/health",
