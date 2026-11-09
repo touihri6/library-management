@@ -79,10 +79,16 @@ class SecurityRulesTest {
     }
 
     @Test
-    void memberCanWriteAReviewButNotModerate() throws Exception {
+    void memberCanWriteAndChangeReviewsOwnershipIsCheckedByReviewService() {
         expectRouted(post("/api/v1/reviews").contentType(MediaType.APPLICATION_JSON).content("{}").with(as("MEMBER")));
-        mockMvc.perform(delete("/api/v1/reviews/1").with(as("MEMBER")))
-                .andExpect(status().isForbidden());
+        expectRouted(delete("/api/v1/reviews/1").with(as("MEMBER")));
+    }
+
+    @Test
+    void memberCanReachTheirOwnLoansAndMember() {
+        expectRouted(get("/api/v1/loans/me").with(as("MEMBER")));
+        expectRouted(post("/api/v1/loans/me").contentType(MediaType.APPLICATION_JSON).content("{}").with(as("MEMBER")));
+        expectRouted(get("/api/v1/members/me").with(as("MEMBER")));
     }
 
     @Test

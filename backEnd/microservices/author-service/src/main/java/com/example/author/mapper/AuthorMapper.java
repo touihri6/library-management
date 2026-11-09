@@ -13,6 +13,8 @@ public interface AuthorMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "updatedBy", ignore = true)
     @Mapping(target = "version", ignore = true)
     Author toEntity(AuthorRequest request);
 
@@ -21,6 +23,8 @@ public interface AuthorMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "updatedBy", ignore = true)
     @Mapping(target = "version", ignore = true)
     void updateEntity(AuthorRequest request, @MappingTarget Author author);
 }

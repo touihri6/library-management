@@ -4,6 +4,7 @@ import com.example.loan.dto.LoanDetails;
 import com.example.loan.dto.LoanRequest;
 import com.example.loan.dto.LoanResponse;
 import com.example.loan.dto.PageResponse;
+import com.example.loan.dto.SelfLoanRequest;
 import com.example.loan.model.enums.LoanStatus;
 import org.springframework.data.domain.Pageable;
 
@@ -16,6 +17,10 @@ public interface LoanService {
     LoanDetails findDetails(Long id);
 
     LoanResponse create(LoanRequest request);
+
+    LoanResponse borrowForMe(SelfLoanRequest request);
+
+    PageResponse<LoanResponse> findMine(Pageable pageable);
 
     LoanResponse update(Long id, LoanRequest request);
 

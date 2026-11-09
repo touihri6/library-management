@@ -4,6 +4,7 @@ import com.example.loan.dto.LoanDetails;
 import com.example.loan.dto.LoanRequest;
 import com.example.loan.dto.LoanResponse;
 import com.example.loan.dto.PageResponse;
+import com.example.loan.dto.SelfLoanRequest;
 import com.example.loan.model.enums.LoanStatus;
 import com.example.loan.service.LoanService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -49,6 +50,29 @@ public class LoanController {
             @Parameter(description = "Loan status") @RequestParam(required = false) LoanStatus status,
             @ParameterObject @PageableDefault(size = 20, sort = "loanDate", direction = Sort.Direction.DESC) Pageable pageable) {
         return loanService.findAll(memberId, bookId, status, pageable);
+    }
+
+    @GetMapping("/me")
+    @Operation(summary = "List the loans of the signed-in member",
+            description = "The member is resolved from the token through member-service")
+    @ApiResponse(responseCode = "200", description = "Loans of the signed-in member")
+    @ApiResponse(responseCode = "404", description = "No member is linked to the account")
+    public PageResponse<LoanResponse> findMine(
+            @ParameterObject @PageableDefault(size = 20, sort = "loanDate", direction = Sort.Direction.DESC) Pageable pageable) {
+        return loanService.findMine(pageable);
+    }
+
+    @PostMapping("/me")
+    @Operation(summary = "Borrow a book for yourself",
+            description = "The member comes from the token, the loan starts today and is due in 14 days")
+    @ApiResponse(responseCode = "201", description = "Loan created")
+    @ApiResponse(responseCode = "404", description = "Book not found or no member linked to the account")
+    @ApiResponse(responseCode = "409", description = "No copy available or the book is already borrowed by you")
+    public ResponseEntity<LoanResponse> borrowForMe(@Valid @RequestBody SelfLoanRequest request) {
+        LoanResponse created = loanService.borrowForMe(request);
+        URI location = ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path("/api/v1/loans/{id}").buildAndExpand(created.id()).toUri();
+        return ResponseEntity.created(location).body(created);
     }
 
     @GetMapping("/{id}")

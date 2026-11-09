@@ -15,7 +15,10 @@ public record MemberResponse(
         String phone,
         MembershipType membershipType,
         LocalDate joinDate,
+        String userId,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        String createdBy,
+        String updatedBy
 ) {
 }

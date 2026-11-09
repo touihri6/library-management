@@ -11,6 +11,7 @@ export function fakeAuth(roles: UserRole[] | null, token = 'test-token'): FakeAu
     roles === null
       ? null
       : {
+          id: 'user-1',
           username: 'sara',
           firstName: 'Sara',
           lastName: 'Librarian',
@@ -28,6 +29,8 @@ export function fakeAuth(roles: UserRole[] | null, token = 'test-token'): FakeAu
     isAdmin: computed(() => has('ADMIN')),
     isStaff: computed(() => has('LIBRARIAN') || has('ADMIN')),
     canReview: computed(() => roles !== null && roles.length > 0),
+    isMember: computed(() => has('MEMBER')),
+    userId: computed(() => profile()?.id ?? null),
     displayName: computed(() => (profile() ? 'Sara Librarian' : '')),
     hasRole: has,
     hasAnyRole: (...wanted: UserRole[]) => wanted.some(has),

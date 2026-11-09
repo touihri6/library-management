@@ -83,7 +83,7 @@ class UserControllerIntegrationTest {
 
     @Test
     void myLoans_returnsTheLinkedMemberAndTheirLoans() throws Exception {
-        when(memberClient.findByEmail("member@library.tn", 1)).thenReturn(new PageResponse<>(List.of(
+        when(memberClient.findByUserId("33333333-3333-3333-3333-333333333333", 1)).thenReturn(new PageResponse<>(List.of(
                 new MemberSummary(7L, "Youssef", "Member", "member@library.tn", "STANDARD")), 0, 1, 1, 1, true));
         when(loanClient.findByMember(7L, 100)).thenReturn(new PageResponse<>(List.of(
                 new LoanSummary(1L, 3L, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 15), null, "ONGOING")),
@@ -101,12 +101,14 @@ class UserControllerIntegrationTest {
 
     @Test
     void myLoans_withoutLinkedMember_returns404() throws Exception {
+        when(memberClient.findByUserId(anyString(), anyInt())).thenReturn(new PageResponse<>(List.of(), 0, 1, 0, 0, true));
+        when(memberClient.findByEmail(anyString(), anyInt())).thenReturn(new PageResponse<>(List.of(), 0, 1, 0, 0, true));
         mockMvc.perform(get("/api/v1/users/me/loans").with(jwt().jwt(token -> token
                         .claim("email", "nobody@mail.com")
                         .claim("realm_access", Map.of("roles", List.of("MEMBER"))))
                         .authorities(new KeycloakRealmRoleConverter())))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.detail").value("No library member is linked to nobody@mail.com"));
+                .andExpect(jsonPath("$.detail").value("No library member is linked to your account"));
     }
 
     @Test

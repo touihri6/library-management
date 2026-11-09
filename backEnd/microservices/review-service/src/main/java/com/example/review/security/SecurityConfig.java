@@ -31,6 +31,8 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/reviews/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/reviews").hasAnyRole(MEMBER, LIBRARIAN, ADMIN)
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/reviews/*").hasAnyRole(MEMBER, LIBRARIAN, ADMIN)
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/reviews/*").hasAnyRole(MEMBER, LIBRARIAN, ADMIN)
                         .requestMatchers("/api/v1/reviews/**").hasAnyRole(LIBRARIAN, ADMIN)
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2

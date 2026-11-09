@@ -15,6 +15,9 @@ public interface MemberClient {
     @GetMapping("/api/v1/members")
     PageResponse<MemberSummary> findByEmail(@RequestParam("email") String email, @RequestParam("size") int size);
 
+    @GetMapping("/api/v1/members")
+    PageResponse<MemberSummary> findByUserId(@RequestParam("userId") String userId, @RequestParam("size") int size);
+
     @PostMapping("/api/v1/members")
     MemberSummary create(@RequestBody MemberCreateRequest request);
 }

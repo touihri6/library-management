@@ -10,6 +10,7 @@ import com.example.review.mapper.ReviewMapper;
 import com.example.review.mapper.ReviewMapperImpl;
 import com.example.review.model.entity.Review;
 import com.example.review.repository.ReviewRepository;
+import com.example.review.security.CurrentUser;
 import com.example.review.service.impl.ReviewServiceImpl;
 import feign.FeignException;
 import feign.Request;
@@ -18,9 +19,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -38,18 +41,23 @@ class ReviewServiceImplTest {
     @Mock
     private BookClient bookClient;
 
+    @Mock
+    private CurrentUser currentUser;
+
     private final ReviewMapper reviewMapper = new ReviewMapperImpl();
 
     private ReviewService reviewService;
 
     @BeforeEach
     void setUp() {
-        reviewService = new ReviewServiceImpl(reviewRepository, reviewMapper, bookClient);
+        reviewService = new ReviewServiceImpl(reviewRepository, reviewMapper, bookClient, currentUser);
     }
 
     @Test
     void create_existingBook_savesTheReview() {
         when(bookClient.findById(1L)).thenReturn(new BookSummary(1L, "Dune"));
+        when(currentUser.id()).thenReturn("user-nour");
+        when(currentUser.displayName()).thenReturn("Nour Haddad");
         when(reviewRepository.save(any(Review.class))).thenAnswer(invocation -> {
             Review review = invocation.getArgument(0);
             review.setId(10L);
@@ -60,6 +68,52 @@ class ReviewServiceImplTest {
 
         assertThat(response.id()).isEqualTo(10L);
         assertThat(response.bookId()).isEqualTo(1L);
+        assertThat(response.userId()).isEqualTo("user-nour");
+        assertThat(response.reviewerName()).isEqualTo("Nour Haddad");
+    }
+
+    @Test
+    void create_byStaffOnBehalfOfSomeone_keepsTheGivenName() {
+        when(bookClient.findById(1L)).thenReturn(new BookSummary(1L, "Dune"));
+        when(currentUser.id()).thenReturn("user-sara");
+        when(currentUser.isStaff()).thenReturn(true);
+        when(reviewRepository.save(any(Review.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ReviewResponse response = reviewService.create(new ReviewRequest(1L, " Amine ", 4, null));
+
+        assertThat(response.reviewerName()).isEqualTo("Amine");
+        assertThat(response.userId()).isEqualTo("user-sara");
+    }
+
+    @Test
+    void delete_reviewOfSomeoneElse_byMember_isForbidden() {
+        when(reviewRepository.findById(5L)).thenReturn(Optional.of(reviewOwnedBy("user-amine")));
+        when(currentUser.id()).thenReturn("user-nour");
+
+        assertThatThrownBy(() -> reviewService.delete(5L)).isInstanceOf(AccessDeniedException.class);
+        verify(reviewRepository, never()).delete(any());
+    }
+
+    @Test
+    void delete_ownReview_byMember_deletesIt() {
+        Review review = reviewOwnedBy("user-nour");
+        when(reviewRepository.findById(5L)).thenReturn(Optional.of(review));
+        when(currentUser.id()).thenReturn("user-nour");
+
+        reviewService.delete(5L);
+
+        verify(reviewRepository).delete(review);
+    }
+
+    @Test
+    void delete_reviewOfSomeoneElse_byStaff_deletesIt() {
+        Review review = reviewOwnedBy("user-amine");
+        when(reviewRepository.findById(5L)).thenReturn(Optional.of(review));
+        when(currentUser.isStaff()).thenReturn(true);
+
+        reviewService.delete(5L);
+
+        verify(reviewRepository).delete(review);
     }
 
     @Test
@@ -94,5 +148,15 @@ class ReviewServiceImplTest {
 
         assertThat(summary.average()).isEqualTo(0.0);
         assertThat(summary.count()).isZero();
+    }
+
+    private static Review reviewOwnedBy(String userId) {
+        Review review = new Review();
+        review.setId(5L);
+        review.setBookId(1L);
+        review.setUserId(userId);
+        review.setReviewerName("Someone");
+        review.setRating(4);
+        return review;
     }
 }

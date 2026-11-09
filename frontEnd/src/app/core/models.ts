@@ -82,6 +82,7 @@ export type LibraryEventRequest = Omit<LibraryEvent, 'id'>;
 export interface Review {
   id: number;
   bookId: number;
+  userId: string | null;
   reviewerName: string;
   rating: number;
   comment: string | null;
@@ -90,7 +91,7 @@ export interface Review {
 
 export interface ReviewRequest {
   bookId: number;
-  reviewerName: string;
+  reviewerName?: string | null;
   rating: number;
   comment: string | null;
 }
@@ -106,6 +107,7 @@ export interface Member {
   phone: string | null;
   membershipType: MembershipType;
   joinDate: string;
+  userId?: string | null;
 }
 
 export type MemberRequest = Omit<Member, 'id'>;
@@ -121,6 +123,10 @@ export interface Loan {
   dueDate: string;
   returnDate: string | null;
   status: LoanStatus;
+}
+
+export interface SelfLoanRequest {
+  bookId: number;
 }
 
 export interface LoanRequest {

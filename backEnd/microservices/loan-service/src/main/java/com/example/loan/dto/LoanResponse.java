@@ -16,6 +16,8 @@ public record LoanResponse(
         LocalDate returnDate,
         LoanStatus status,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        String createdBy,
+        String updatedBy
 ) {
 }

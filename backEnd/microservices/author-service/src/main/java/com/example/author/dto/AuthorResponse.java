@@ -13,6 +13,8 @@ public record AuthorResponse(
         Integer birthYear,
         String biography,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        String createdBy,
+        String updatedBy
 ) {
 }

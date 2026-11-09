@@ -14,6 +14,7 @@ import com.example.member.mapper.MemberMapperImpl;
 import com.example.member.model.entity.Member;
 import com.example.member.model.enums.MembershipType;
 import com.example.member.repository.MemberRepository;
+import com.example.member.security.CurrentUser;
 import com.example.member.service.impl.MemberServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,13 +42,16 @@ class MemberServiceImplTest {
     @Mock
     private LoanClient loanClient;
 
+    @Mock
+    private CurrentUser currentUser;
+
     private final MemberMapper memberMapper = new MemberMapperImpl();
 
     private MemberService memberService;
 
     @BeforeEach
     void setUp() {
-        memberService = new MemberServiceImpl(memberRepository, memberMapper, loanClient);
+        memberService = new MemberServiceImpl(memberRepository, memberMapper, loanClient, currentUser);
     }
 
     @Test
@@ -81,6 +85,70 @@ class MemberServiceImplTest {
         memberService.delete(1L);
 
         verify(memberRepository).delete(member);
+    }
+
+    @Test
+    void findMine_memberLinkedToTheAccount_isReturned() {
+        Member linked = member(1L);
+        linked.setUserId("user-amine");
+        when(currentUser.id()).thenReturn("user-amine");
+        when(memberRepository.findByUserId("user-amine")).thenReturn(Optional.of(linked));
+
+        MemberResponse response = memberService.findMine();
+
+        assertThat(response.id()).isEqualTo(1L);
+        assertThat(response.userId()).isEqualTo("user-amine");
+        verify(memberRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void findMine_unlinkedMemberWithTheTokenEmail_isLinkedOnTheFly() {
+        Member unlinked = member(1L);
+        when(currentUser.id()).thenReturn("user-amine");
+        when(currentUser.email()).thenReturn("amine@mail.com");
+        when(memberRepository.findByUserId("user-amine")).thenReturn(Optional.empty());
+        when(memberRepository.findByEmailIgnoreCaseAndUserIdIsNull("amine@mail.com")).thenReturn(Optional.of(unlinked));
+        when(memberRepository.saveAndFlush(unlinked)).thenReturn(unlinked);
+
+        MemberResponse response = memberService.findMine();
+
+        assertThat(response.userId()).isEqualTo("user-amine");
+    }
+
+    @Test
+    void findMine_withoutAnyMember_throwsNotFound() {
+        when(currentUser.id()).thenReturn("user-x");
+        when(currentUser.email()).thenReturn("x@mail.com");
+        when(memberRepository.findByUserId("user-x")).thenReturn(Optional.empty());
+        when(memberRepository.findByEmailIgnoreCaseAndUserIdIsNull("x@mail.com")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> memberService.findMine())
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("No library member is linked to your account");
+    }
+
+    @Test
+    void create_accountAlreadyLinkedToAnotherMember_isRejected() {
+        MemberRequest request = new MemberRequest("Sara", "Trabelsi", "sara@mail.com", null,
+                MembershipType.STANDARD, LocalDate.of(2025, 1, 10), "user-sara");
+        when(memberRepository.existsByEmail("sara@mail.com")).thenReturn(false);
+        when(memberRepository.existsByUserId("user-sara")).thenReturn(true);
+
+        assertThatThrownBy(() -> memberService.create(request)).isInstanceOf(DuplicateResourceException.class);
+        verify(memberRepository, never()).save(any());
+    }
+
+    @Test
+    void update_keepsTheAccountLink() {
+        Member existing = member(2L);
+        existing.setUserId("user-sara");
+        when(memberRepository.findById(2L)).thenReturn(Optional.of(existing));
+        when(memberRepository.existsByEmailAndIdNot("sara@mail.com", 2L)).thenReturn(false);
+        when(memberRepository.saveAndFlush(existing)).thenReturn(existing);
+
+        MemberResponse response = memberService.update(2L, request("sara@mail.com"));
+
+        assertThat(response.userId()).isEqualTo("user-sara");
     }
 
     private static Member member(Long id) {
@@ -137,6 +205,6 @@ class MemberServiceImplTest {
     }
 
     private static MemberRequest request(String email) {
-        return new MemberRequest("Sara", "Trabelsi", email, "22111222", MembershipType.STANDARD, LocalDate.of(2025, 1, 10));
+        return new MemberRequest("Sara", "Trabelsi", email, "22111222", MembershipType.STANDARD, LocalDate.of(2025, 1, 10), null);
     }
 }

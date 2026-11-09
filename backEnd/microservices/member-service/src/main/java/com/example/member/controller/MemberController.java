@@ -46,8 +46,18 @@ public class MemberController {
             @Parameter(description = "Part of the last name (case-insensitive)") @RequestParam(required = false) String lastName,
             @Parameter(description = "Exact membership type") @RequestParam(required = false) MembershipType membershipType,
             @Parameter(description = "Exact e-mail (case-insensitive)") @RequestParam(required = false) String email,
+            @Parameter(description = "Keycloak id (sub) of the linked account") @RequestParam(required = false) String userId,
             @ParameterObject @PageableDefault(size = 20, sort = "lastName", direction = Sort.Direction.ASC) Pageable pageable) {
-        return memberService.findAll(lastName, membershipType, email, pageable);
+        return memberService.findAll(lastName, membershipType, email, userId, pageable);
+    }
+
+    @GetMapping("/me")
+    @Operation(summary = "Get the member linked to the signed-in account",
+            description = "Looked up by the token's sub; a member with the token's e-mail and no account yet is linked on the fly")
+    @ApiResponse(responseCode = "200", description = "Member found")
+    @ApiResponse(responseCode = "404", description = "No member is linked to the account")
+    public MemberResponse findMine() {
+        return memberService.findMine();
     }
 
     @GetMapping("/{id}")

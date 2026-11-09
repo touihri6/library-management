@@ -16,6 +16,8 @@ public record EventResponse(
         String location,
         Integer capacity,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        String createdBy,
+        String updatedBy
 ) {
 }

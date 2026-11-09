@@ -3,7 +3,7 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { BookApi, ReviewApi } from '../../core/api/apis';
+import { BookApi, LoanApi, ReviewApi } from '../../core/api/apis';
 import { Auth } from '../../core/auth/auth';
 import { BookDetails, Review, label } from '../../core/models';
 import { Alerts } from '../../shared/alerts';
@@ -19,6 +19,7 @@ export class BookDetail implements OnInit {
 
   private readonly bookApi = inject(BookApi);
   private readonly reviewApi = inject(ReviewApi);
+  private readonly loanApi = inject(LoanApi);
   private readonly router = inject(Router);
   protected readonly auth = inject(Auth);
   protected readonly feedback = new Feedback();
@@ -29,7 +30,7 @@ export class BookDetail implements OnInit {
   protected readonly reviews = signal<Review[]>([]);
 
   protected readonly reviewForm = inject(FormBuilder).nonNullable.group({
-    reviewerName: [this.auth.displayName(), [Validators.required, Validators.maxLength(80)]],
+    reviewerName: ['', Validators.maxLength(80)],
     rating: [5, [Validators.required, Validators.min(1), Validators.max(5)]],
     comment: ['', Validators.maxLength(1000)],
   });
@@ -66,7 +67,7 @@ export class BookDetail implements OnInit {
         firstValueFrom(
           this.reviewApi.create({
             bookId: Number(this.id()),
-            reviewerName: value.reviewerName.trim(),
+            reviewerName: this.auth.isStaff() ? value.reviewerName.trim() || null : null,
             rating: Number(value.rating),
             comment: value.comment.trim() || null,
           }),
@@ -79,6 +80,24 @@ export class BookDetail implements OnInit {
       const notice = this.feedback.notice();
       await this.load();
       this.feedback.notice.set(notice);
+    }
+  }
+
+  protected canModify(review: Review): boolean {
+    return this.auth.isStaff() || (review.userId !== null && review.userId === this.auth.userId());
+  }
+
+  protected async borrow(): Promise<void> {
+    const book = this.details()?.book;
+    if (!book || !confirm(`Borrow "${book.title}" for 14 days?`)) {
+      return;
+    }
+    const done = await this.feedback.run(() =>
+      firstValueFrom(this.loanApi.borrow({ bookId: book.id })),
+    );
+    if (done) {
+      await this.load();
+      this.feedback.notice.set(`"${book.title}" is yours for 14 days. Find it under My account.`);
     }
   }
 

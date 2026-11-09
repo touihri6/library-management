@@ -19,6 +19,8 @@ public record BookResponse(
         @Schema(description = "Derived field: true when at least one copy is available")
         boolean available,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        String createdBy,
+        String updatedBy
 ) {
 }

@@ -26,3 +26,34 @@
 } @else if (!feedback.error()) {
   <p class="muted">Loading your account…</p>
 }
+
+@if (loans(); as loans) {
+  <h2 class="section-title">My loans</h2>
+  <ul class="list">
+    @for (loan of loans; track loan.id) {
+      <li class="card list-item">
+        <div>
+          <strong
+            ><a [routerLink]="['/books', loan.bookId]">{{ titles()[loan.bookId] }}</a></strong
+          >
+          <p class="meta">
+            Borrowed {{ loan.loanDate | date: 'mediumDate' }} · due
+            {{ loan.dueDate | date: 'mediumDate' }}
+            @if (loan.returnDate) {
+              · returned {{ loan.returnDate | date: 'mediumDate' }}
+            }
+          </p>
+        </div>
+        <span
+          class="badge"
+          [class.open]="loan.status === 'ONGOING'"
+          [class.closed]="loan.status !== 'ONGOING'"
+        >
+          {{ label(loan.status) }}
+        </span>
+      </li>
+    } @empty {
+      <li class="empty">You have not borrowed any book yet.</li>
+    }
+  </ul>
+}

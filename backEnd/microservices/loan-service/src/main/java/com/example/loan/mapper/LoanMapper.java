@@ -15,6 +15,8 @@ public interface LoanMapper {
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "updatedBy", ignore = true)
     @Mapping(target = "version", ignore = true)
     Loan toEntity(LoanRequest request);
 
@@ -25,6 +27,8 @@ public interface LoanMapper {
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "updatedBy", ignore = true)
     @Mapping(target = "version", ignore = true)
     void updateEntity(LoanRequest request, @MappingTarget Loan loan);
 }

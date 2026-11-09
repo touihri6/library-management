@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @Transactional(readOnly = true)
@@ -89,12 +90,11 @@ public class UserServiceImpl implements UserService {
     @Override
     public MyLoans myLoans(Jwt jwt) {
         String email = jwt.getClaimAsString("email");
-        if (email == null) {
-            throw new ResourceNotFoundException("Your account has no e-mail, so no library member can be linked to it");
-        }
-        MemberSummary member = memberClient.findByEmail(email, 1).content().stream()
+        MemberSummary member = memberClient.findByUserId(jwt.getSubject(), 1).content().stream()
                 .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("No library member is linked to " + email));
+                .or(() -> email == null ? Optional.empty()
+                        : memberClient.findByEmail(email, 1).content().stream().findFirst())
+                .orElseThrow(() -> new ResourceNotFoundException("No library member is linked to your account"));
         return new MyLoans(member, loanClient.findByMember(member.id(), MAX_LOANS).content());
     }
 
@@ -155,7 +155,7 @@ public class UserServiceImpl implements UserService {
                 return;
             }
             memberClient.create(new MemberCreateRequest(user.getFirstName(), user.getLastName(), user.getEmail(),
-                    null, MemberCreateRequest.STANDARD, LocalDate.now()));
+                    null, MemberCreateRequest.STANDARD, LocalDate.now(), user.getKeycloakId()));
         } catch (RuntimeException ex) {
             log.warn("Account {} created, but no library member could be created for it: {}",
                     user.getUsername(), ex.getMessage());

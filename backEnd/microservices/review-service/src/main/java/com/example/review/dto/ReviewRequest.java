@@ -3,7 +3,6 @@ package com.example.review.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
@@ -15,8 +14,8 @@ public record ReviewRequest(
         @NotNull @Positive
         Long bookId,
 
-        @Schema(example = "Amine")
-        @NotBlank @Size(max = 80)
+        @Schema(example = "Amine", description = "Only used when a librarian or admin writes on behalf of someone; members always get the name from their token")
+        @Size(max = 80)
         String reviewerName,
 
         @Schema(example = "5")

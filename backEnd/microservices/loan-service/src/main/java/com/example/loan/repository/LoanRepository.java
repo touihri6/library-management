@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
+
 public interface LoanRepository extends JpaRepository<Loan, Long> {
 
     @Query("""
@@ -20,4 +22,6 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
                       @Param("bookId") Long bookId,
                       @Param("status") LoanStatus status,
                       Pageable pageable);
+
+    boolean existsByMemberIdAndBookIdAndStatusIn(Long memberId, Long bookId, Collection<LoanStatus> statuses);
 }

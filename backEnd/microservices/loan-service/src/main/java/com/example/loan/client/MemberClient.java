@@ -10,4 +10,7 @@ public interface MemberClient {
 
     @GetMapping("/api/v1/members/{id}")
     MemberResponse findById(@PathVariable("id") Long id);
+
+    @GetMapping("/api/v1/members/me")
+    MemberResponse findMine();
 }

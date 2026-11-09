@@ -5,6 +5,8 @@ import com.example.loan.client.MemberClient;
 import com.example.loan.dto.BookResponse;
 import com.example.loan.dto.LoanRequest;
 import com.example.loan.dto.LoanResponse;
+import com.example.loan.dto.MemberResponse;
+import com.example.loan.dto.SelfLoanRequest;
 import com.example.loan.exception.InvalidDatesException;
 import com.example.loan.exception.InvalidOperationException;
 import com.example.loan.exception.ResourceNotFoundException;
@@ -174,5 +176,42 @@ class LoanServiceImplTest {
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Member 2 not found");
         verify(loanRepository, never()).save(any());
+    }
+
+    @Test
+    void borrowForMe_takesTheMemberFromTheTokenAndDueInFourteenDays() {
+        when(memberClient.findMine()).thenReturn(new MemberResponse(7L, "Amine", "Ben Ali", "amine@mail.com", "STANDARD"));
+        when(bookClient.findById(1L)).thenReturn(new BookResponse(1L, "Dune", "Frank Herbert", "978-0441172719", 4, true));
+        when(loanRepository.save(any(Loan.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        LoanResponse response = loanService.borrowForMe(new SelfLoanRequest(1L));
+
+        assertThat(response.memberId()).isEqualTo(7L);
+        assertThat(response.status()).isEqualTo(LoanStatus.ONGOING);
+        assertThat(response.loanDate()).isEqualTo(LocalDate.now());
+        assertThat(response.dueDate()).isEqualTo(LocalDate.now().plusDays(14));
+        verify(loanEventPublisher).publishLoanCreated(any(Loan.class));
+    }
+
+    @Test
+    void borrowForMe_bookAlreadyBorrowedByTheMember_isRejected() {
+        when(memberClient.findMine()).thenReturn(new MemberResponse(7L, "Amine", "Ben Ali", "amine@mail.com", "STANDARD"));
+        when(loanRepository.existsByMemberIdAndBookIdAndStatusIn(any(), any(), any())).thenReturn(true);
+
+        assertThatThrownBy(() -> loanService.borrowForMe(new SelfLoanRequest(1L)))
+                .isInstanceOf(InvalidOperationException.class)
+                .hasMessage("You already have an open loan for book 1");
+        verify(loanRepository, never()).save(any());
+    }
+
+    @Test
+    void borrowForMe_withoutLinkedMember_throwsNotFound() {
+        Request request = Request.create(Request.HttpMethod.GET, "/api/v1/members/me", Map.of(), null, StandardCharsets.UTF_8, null);
+        when(memberClient.findMine()).thenThrow(new FeignException.NotFound("404", request, null, Map.of()));
+
+        assertThatThrownBy(() -> loanService.borrowForMe(new SelfLoanRequest(1L)))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("No library member is linked to your account");
+        verifyNoInteractions(bookClient);
     }
 }

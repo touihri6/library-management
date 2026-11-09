@@ -9,6 +9,18 @@
       <h1>{{ book.title }}</h1>
       <p class="muted">{{ book.author }} · {{ label(book.genre) }}</p>
     </div>
+    @if (auth.isMember() && book.available) {
+      <div class="actions">
+        <button
+          type="button"
+          class="button primary"
+          [disabled]="feedback.busy()"
+          (click)="borrow()"
+        >
+          Borrow this book
+        </button>
+      </div>
+    }
     @if (auth.isStaff()) {
       <div class="actions">
         <a class="button" [routerLink]="['/books', book.id, 'edit']">Edit</a>
@@ -59,10 +71,21 @@
   @if (auth.canReview()) {
     <form class="card form" [formGroup]="reviewForm" (ngSubmit)="submitReview()">
       <div class="row">
-        <div class="field">
-          <label for="reviewerName">Your name</label>
-          <input id="reviewerName" type="text" formControlName="reviewerName" />
-        </div>
+        @if (auth.isStaff()) {
+          <div class="field">
+            <label for="reviewerName">On behalf of (optional)</label>
+            <input
+              id="reviewerName"
+              type="text"
+              formControlName="reviewerName"
+              [placeholder]="auth.displayName()"
+            />
+          </div>
+        } @else {
+          <p class="muted">
+            Publishing as <strong>{{ auth.displayName() }}</strong>
+          </p>
+        }
         <div class="field small">
           <label for="rating">Rating</label>
           <select id="rating" formControlName="rating">
@@ -76,7 +99,7 @@
       <textarea id="comment" rows="3" formControlName="comment"></textarea>
       @if (reviewForm.touched && reviewForm.invalid) {
         <small class="field-error"
-          >Your name is required and the comment is limited to 1000 characters.</small
+          >The name is limited to 80 characters and the comment to 1000 characters.</small
         >
       }
       <div class="actions">
@@ -100,7 +123,7 @@
             <p class="quote">{{ review.comment }}</p>
           }
         </div>
-        @if (auth.isStaff()) {
+        @if (canModify(review)) {
           <button
             type="button"
             class="button small danger"

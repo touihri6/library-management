@@ -9,7 +9,10 @@ import org.springframework.data.domain.Pageable;
 
 public interface MemberService {
 
-    PageResponse<MemberResponse> findAll(String lastName, MembershipType membershipType, String email, Pageable pageable);
+    PageResponse<MemberResponse> findAll(String lastName, MembershipType membershipType, String email, String userId,
+                                         Pageable pageable);
+
+    MemberResponse findMine();
 
     MemberResponse findById(Long id);
 

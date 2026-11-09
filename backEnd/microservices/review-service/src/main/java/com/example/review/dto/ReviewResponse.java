@@ -8,10 +8,13 @@ import java.time.Instant;
 public record ReviewResponse(
         Long id,
         Long bookId,
+        String userId,
         String reviewerName,
         Integer rating,
         String comment,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        String createdBy,
+        String updatedBy
 ) {
 }

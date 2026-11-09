@@ -1,6 +1,7 @@
 package com.example.review.controller;
 
 import com.example.review.client.BookClient;
+import com.jayway.jsonpath.JsonPath;
 import feign.FeignException;
 import feign.Request;
 import org.junit.jupiter.api.Test;
@@ -8,9 +9,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
@@ -18,6 +21,7 @@ import java.util.Map;
 
 import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -45,6 +49,19 @@ class ReviewControllerIntegrationTest {
 
     @MockitoBean
     private BookClient bookClient;
+
+    private static RequestPostProcessor as(String subject, String name, String role) {
+        return jwt().jwt(token -> token.subject(subject).claim("name", name))
+                .authorities(new SimpleGrantedAuthority("ROLE_" + role));
+    }
+
+    private static RequestPostProcessor librarian() {
+        return as("sara-id", "Sara Trabelsi", "LIBRARIAN");
+    }
+
+    private static RequestPostProcessor member(String subject, String name) {
+        return as(subject, name, "MEMBER");
+    }
 
     private static Request request(String url) {
         return Request.create(Request.HttpMethod.GET, url, Map.of(), null, StandardCharsets.UTF_8, null);
@@ -103,7 +120,7 @@ class ReviewControllerIntegrationTest {
 
     @Test
     void create_returns201() throws Exception {
-        mockMvc.perform(post("/api/v1/reviews").contentType(MediaType.APPLICATION_JSON).content(NEW_REVIEW))
+        mockMvc.perform(post("/api/v1/reviews").contentType(MediaType.APPLICATION_JSON).content(NEW_REVIEW).with(librarian()))
                 .andExpect(status().isCreated())
                 .andExpect(header().exists("Location"))
                 .andExpect(jsonPath("$.rating").value(5));
@@ -111,8 +128,37 @@ class ReviewControllerIntegrationTest {
 
     @Test
     void delete_returns204() throws Exception {
-        mockMvc.perform(delete("/api/v1/reviews/5")).andExpect(status().isNoContent());
+        mockMvc.perform(delete("/api/v1/reviews/5").with(librarian())).andExpect(status().isNoContent());
         mockMvc.perform(get("/api/v1/reviews/5")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void create_byMember_takesTheNameAndIdFromTheToken() throws Exception {
+        mockMvc.perform(post("/api/v1/reviews").contentType(MediaType.APPLICATION_JSON).content(NEW_REVIEW)
+                        .with(member("nour-id", "Nour Haddad")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.userId").value("nour-id"))
+                .andExpect(jsonPath("$.reviewerName").value("Nour Haddad"))
+                .andExpect(jsonPath("$.createdBy").value("nour-id"));
+    }
+
+    @Test
+    void delete_reviewOfSomeoneElse_byMember_returns403() throws Exception {
+        mockMvc.perform(delete("/api/v1/reviews/5").with(member("nour-id", "Nour Haddad")))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/reviews/5")).andExpect(status().isOk());
+    }
+
+    @Test
+    void delete_ownReview_byMember_returns204() throws Exception {
+        String body = mockMvc.perform(post("/api/v1/reviews").contentType(MediaType.APPLICATION_JSON).content(NEW_REVIEW)
+                        .with(member("nour-id", "Nour Haddad")))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        Integer id = JsonPath.read(body, "$.id");
+
+        mockMvc.perform(delete("/api/v1/reviews/" + id).with(member("nour-id", "Nour Haddad")))
+                .andExpect(status().isNoContent());
     }
 
     @Test
@@ -131,6 +177,7 @@ class ReviewControllerIntegrationTest {
     @Test
     void create_throughGateway_locationUsesForwardedHost() throws Exception {
         mockMvc.perform(post("/api/v1/reviews").contentType(MediaType.APPLICATION_JSON).content(NEW_REVIEW)
+                        .with(librarian())
                         .header("X-Forwarded-Host", "localhost:8080")
                         .header("X-Forwarded-Proto", "http"))
                 .andExpect(status().isCreated())

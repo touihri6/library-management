@@ -8,6 +8,7 @@ import com.example.loan.dto.LoanRequest;
 import com.example.loan.dto.LoanResponse;
 import com.example.loan.dto.MemberResponse;
 import com.example.loan.dto.PageResponse;
+import com.example.loan.dto.SelfLoanRequest;
 import com.example.loan.exception.InvalidDatesException;
 import com.example.loan.exception.InvalidOperationException;
 import com.example.loan.exception.ResourceNotFoundException;
@@ -23,10 +24,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.EnumSet;
+import java.util.Set;
 
 @Service
 @Transactional(readOnly = true)
 public class LoanServiceImpl implements LoanService {
+
+    static final int SELF_LOAN_DAYS = 14;
+    private static final Set<LoanStatus> OPEN_STATUSES = EnumSet.of(LoanStatus.ONGOING, LoanStatus.LATE);
 
     private final LoanRepository loanRepository;
     private final LoanMapper loanMapper;
@@ -77,6 +83,35 @@ public class LoanServiceImpl implements LoanService {
         Loan saved = loanRepository.save(loan);
         loanEventPublisher.publishLoanCreated(saved);
         return loanMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public LoanResponse borrowForMe(SelfLoanRequest request) {
+        MemberResponse member = getMyMemberOrThrow();
+        if (loanRepository.existsByMemberIdAndBookIdAndStatusIn(member.id(), request.bookId(), OPEN_STATUSES)) {
+            throw new InvalidOperationException("You already have an open loan for book " + request.bookId());
+        }
+        BookResponse book = getBookOrThrow(request.bookId());
+        if (!book.available()) {
+            throw new InvalidOperationException("Book " + book.id() + " has no available copy");
+        }
+        LocalDate today = LocalDate.now();
+        Loan loan = new Loan();
+        loan.setBookId(book.id());
+        loan.setMemberId(member.id());
+        loan.setLoanDate(today);
+        loan.setDueDate(today.plusDays(SELF_LOAN_DAYS));
+        loan.setStatus(LoanStatus.ONGOING);
+        Loan saved = loanRepository.save(loan);
+        loanEventPublisher.publishLoanCreated(saved);
+        return loanMapper.toResponse(saved);
+    }
+
+    @Override
+    public PageResponse<LoanResponse> findMine(Pageable pageable) {
+        MemberResponse member = getMyMemberOrThrow();
+        return PageResponse.from(loanRepository.search(member.id(), null, null, pageable), loanMapper::toResponse);
     }
 
     @Override
@@ -133,6 +168,14 @@ public class LoanServiceImpl implements LoanService {
             return bookClient.findById(id);
         } catch (FeignException.NotFound ex) {
             throw new ResourceNotFoundException("Book " + id + " not found");
+        }
+    }
+
+    private MemberResponse getMyMemberOrThrow() {
+        try {
+            return memberClient.findMine();
+        } catch (FeignException.NotFound ex) {
+            throw new ResourceNotFoundException("No library member is linked to your account");
         }
     }
 

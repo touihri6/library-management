@@ -35,6 +35,10 @@ public record MemberRequest(
 
         @Schema(example = "2025-09-01")
         @NotNull @PastOrPresent
-        LocalDate joinDate
+        LocalDate joinDate,
+
+        @Schema(description = "Keycloak id (sub) of the account linked to this member; only read on creation", example = "5f0c2a9e-3b7d-4f1e-9a51-1c2d3e4f5a6b")
+        @Size(max = 36)
+        String userId
 ) {
 }

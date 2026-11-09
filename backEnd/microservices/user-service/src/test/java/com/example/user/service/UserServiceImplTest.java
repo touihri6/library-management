@@ -145,8 +145,8 @@ class UserServiceImplTest {
     }
 
     @Test
-    void myLoans_findsTheMemberByEmailThenTheirLoans() {
-        when(memberClient.findByEmail("amine@mail.com", 1)).thenReturn(members(member()));
+    void myLoans_findsTheMemberByAccountIdThenTheirLoans() {
+        when(memberClient.findByUserId("kc-1", 1)).thenReturn(members(member()));
         when(loanClient.findByMember(7L, 100)).thenReturn(new PageResponse<>(List.of(
                 new LoanSummary(1L, 3L, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 15), null, "ONGOING")),
                 0, 100, 1, 1, true));
@@ -158,12 +158,24 @@ class UserServiceImplTest {
     }
 
     @Test
+    void myLoans_memberNotLinkedYet_fallsBackToTheEmail() {
+        when(memberClient.findByUserId("kc-1", 1)).thenReturn(members());
+        when(memberClient.findByEmail("amine@mail.com", 1)).thenReturn(members(member()));
+        when(loanClient.findByMember(7L, 100)).thenReturn(new PageResponse<>(List.of(), 0, 100, 0, 0, true));
+
+        MyLoans result = userService.myLoans(tokenWithEmail("amine@mail.com"));
+
+        assertThat(result.member().id()).isEqualTo(7L);
+    }
+
+    @Test
     void myLoans_withoutLinkedMember_throwsNotFound() {
+        when(memberClient.findByUserId("kc-1", 1)).thenReturn(members());
         when(memberClient.findByEmail("nobody@mail.com", 1)).thenReturn(members());
 
         assertThatThrownBy(() -> userService.myLoans(tokenWithEmail("nobody@mail.com")))
                 .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage("No library member is linked to nobody@mail.com");
+                .hasMessage("No library member is linked to your account");
         verifyNoInteractions(loanClient);
     }
 

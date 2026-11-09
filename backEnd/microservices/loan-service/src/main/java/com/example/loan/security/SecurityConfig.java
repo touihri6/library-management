@@ -30,6 +30,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS).permitAll()
                         .requestMatchers("/error", "/actuator/health/**", "/actuator/info").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers("/api/v1/loans/me").hasAnyRole(MEMBER, LIBRARIAN, ADMIN)
                         .requestMatchers(HttpMethod.GET, "/api/v1/loans").hasAnyRole(LIBRARIAN, ADMIN, SERVICE)
                         .requestMatchers("/api/v1/loans/**").hasAnyRole(LIBRARIAN, ADMIN)
                         .anyRequest().authenticated())

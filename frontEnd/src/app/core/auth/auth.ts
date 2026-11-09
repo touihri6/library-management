@@ -4,6 +4,7 @@ import { environment } from '../../../environments/environment';
 import { USER_ROLES, UserRole } from '../models';
 
 export interface UserProfile {
+  id: string;
   username: string;
   firstName: string;
   lastName: string;
@@ -12,6 +13,7 @@ export interface UserProfile {
 }
 
 interface KeycloakClaims {
+  sub?: string;
   preferred_username?: string;
   given_name?: string;
   family_name?: string;
@@ -33,6 +35,8 @@ export class Auth {
   readonly isAdmin = computed(() => this.hasRole('ADMIN'));
   readonly isStaff = computed(() => this.hasAnyRole('LIBRARIAN', 'ADMIN'));
   readonly canReview = computed(() => this.hasAnyRole('MEMBER', 'LIBRARIAN', 'ADMIN'));
+  readonly isMember = computed(() => this.hasRole('MEMBER'));
+  readonly userId = computed(() => this.user()?.id ?? null);
   readonly displayName = computed(() => {
     const profile = this.user();
     if (!profile) {
@@ -97,6 +101,7 @@ export class Auth {
       USER_ROLES.includes(role as UserRole),
     );
     return {
+      id: claims.sub ?? '',
       username: claims.preferred_username ?? '',
       firstName: claims.given_name ?? '',
       lastName: claims.family_name ?? '',

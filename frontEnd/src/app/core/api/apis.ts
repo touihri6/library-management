@@ -12,8 +12,10 @@ import {
   LoanRequest,
   Member,
   MemberRequest,
+  Page,
   Review,
   ReviewRequest,
+  SelfLoanRequest,
   User,
   UserCreateRequest,
   RegisterRequest,
@@ -68,6 +70,14 @@ export class LoanApi extends CrudApi<Loan, LoanRequest> {
 
   returnLoan(id: number): Observable<Loan> {
     return this.http.patch<Loan>(`${this.url}/${id}/return`, null);
+  }
+
+  mine(size = 50): Observable<Page<Loan>> {
+    return this.http.get<Page<Loan>>(`${this.url}/me`, { params: { size } });
+  }
+
+  borrow(request: SelfLoanRequest): Observable<Loan> {
+    return this.http.post<Loan>(`${this.url}/me`, request);
   }
 }
 

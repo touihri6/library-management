@@ -8,7 +8,8 @@ public record MemberCreateRequest(
         String email,
         String phone,
         String membershipType,
-        LocalDate joinDate
+        LocalDate joinDate,
+        String userId
 ) {
 
     public static final String STANDARD = "STANDARD";
