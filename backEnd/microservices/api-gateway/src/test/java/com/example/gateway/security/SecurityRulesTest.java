@@ -53,6 +53,16 @@ class SecurityRulesTest {
     }
 
     @Test
+    void swaggerUiAndServiceDocsArePublic() throws Exception {
+        mockMvc.perform(get("/swagger-ui.html"))
+                .andExpect(status().is3xxRedirection());
+        mockMvc.perform(get("/v3/api-docs/swagger-config"))
+                .andExpect(status().isOk());
+        expectRouted(get("/api-docs/book-service"));
+        expectRouted(get("/api-docs/notification-service"));
+    }
+
+    @Test
     void catalogReadsArePublicAndReachTheRoute() {
         expectRouted(get("/api/v1/books"));
         expectRouted(get("/api/v1/authors/1"));

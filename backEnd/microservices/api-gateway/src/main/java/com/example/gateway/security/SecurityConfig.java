@@ -28,6 +28,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(requests -> requests
                         .requestMatchers(HttpMethod.OPTIONS).permitAll()
                         .requestMatchers("/error", "/actuator/health/**", "/actuator/info").permitAll()
+                        .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/books/**").permitAll()
                         .requestMatchers("/api/v1/books/**").hasAnyRole(LIBRARIAN, ADMIN)
                         .requestMatchers(HttpMethod.GET, "/api/v1/authors/**").permitAll()

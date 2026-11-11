@@ -29,15 +29,23 @@ class GatewayRoutesTest {
                 .stream()
                 .collect(Collectors.toMap(RouteProperties::getId, route -> route.getUri().toString()));
 
-        assertThat(routes).containsExactlyInAnyOrderEntriesOf(Map.of(
-                "book-service", "lb://BOOK-SERVICE",
-                "member-service", "lb://MEMBER-SERVICE",
-                "loan-service", "lb://LOAN-SERVICE",
-                "review-service", "lb://REVIEW-SERVICE",
-                "event-service", "lb://EVENT-SERVICE",
-                "author-service", "lb://AUTHOR-SERVICE",
-                "notification-service", "lb://NOTIFICATION-SERVICE",
-                "user-service", "lb://USER-SERVICE"));
+        assertThat(routes).containsExactlyInAnyOrderEntriesOf(Map.ofEntries(
+                Map.entry("book-service", "lb://BOOK-SERVICE"),
+                Map.entry("book-service-docs", "lb://BOOK-SERVICE"),
+                Map.entry("member-service", "lb://MEMBER-SERVICE"),
+                Map.entry("member-service-docs", "lb://MEMBER-SERVICE"),
+                Map.entry("loan-service", "lb://LOAN-SERVICE"),
+                Map.entry("loan-service-docs", "lb://LOAN-SERVICE"),
+                Map.entry("review-service", "lb://REVIEW-SERVICE"),
+                Map.entry("review-service-docs", "lb://REVIEW-SERVICE"),
+                Map.entry("event-service", "lb://EVENT-SERVICE"),
+                Map.entry("event-service-docs", "lb://EVENT-SERVICE"),
+                Map.entry("author-service", "lb://AUTHOR-SERVICE"),
+                Map.entry("author-service-docs", "lb://AUTHOR-SERVICE"),
+                Map.entry("notification-service", "lb://NOTIFICATION-SERVICE"),
+                Map.entry("notification-service-docs", "lb://NOTIFICATION-SERVICE"),
+                Map.entry("user-service", "lb://USER-SERVICE"),
+                Map.entry("user-service-docs", "lb://USER-SERVICE")));
     }
 
     @Test

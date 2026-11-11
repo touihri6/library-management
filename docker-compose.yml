@@ -97,6 +97,7 @@ services:
     environment:
       <<: *spring-env
       EUREKA_INSTANCE_HOSTNAME: api-gateway
+      SPRING_CLOUD_GATEWAY_SERVER_WEBMVC_TRUSTED_PROXIES: 127\.0\.0\.1|0:0:0:0:0:0:0:1|10\..*|172\.(1[6-9]|2[0-9]|3[01])\..*|192\.168\..*
     ports:
       - "8080:8080"
 
