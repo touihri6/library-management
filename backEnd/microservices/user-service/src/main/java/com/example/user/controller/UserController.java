@@ -11,6 +11,7 @@ import com.example.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springdoc.core.annotations.ParameterObject;
@@ -46,11 +47,15 @@ public class UserController {
     }
 
     @PostMapping("/register")
-    @Operation(summary = "Register a MEMBER account (public)")
+    @Operation(summary = "Register a MEMBER account (public)",
+            description = "Public. Creates the account in Keycloak with the MEMBER role, stores it locally, then creates the "
+                    + "matching library member in member-service through OpenFeign. If member-service fails, the account "
+                    + "is still created and no member is linked")
     @ApiResponse(responseCode = "201", description = "Account created in Keycloak")
     @ApiResponse(responseCode = "400", description = "Invalid payload")
     @ApiResponse(responseCode = "409", description = "Username or email already exists")
     @ApiResponse(responseCode = "502", description = "Keycloak error")
+    @SecurityRequirements
     public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterRequest request) {
         UserResponse created = userService.register(request);
         URI location = ServletUriComponentsBuilder.fromCurrentContextPath()
@@ -59,7 +64,8 @@ public class UserController {
     }
 
     @GetMapping("/me")
-    @Operation(summary = "Get the account of the authenticated user")
+    @Operation(summary = "Get the account of the authenticated user",
+            description = "Open to any authenticated user. The local account is created or relinked from the token claims when missing")
     @ApiResponse(responseCode = "200", description = "Current user")
     @ApiResponse(responseCode = "401", description = "Missing or invalid token")
     public UserResponse me(@AuthenticationPrincipal Jwt jwt) {
@@ -68,7 +74,7 @@ public class UserController {
 
     @GetMapping("/me/loans")
     @Operation(summary = "Get the loans of the authenticated user",
-            description = "The library member is found by e-mail in member-service, then the loans in loan-service, through OpenFeign")
+            description = "Open to any authenticated user. The library member is found by e-mail in member-service, then the loans in loan-service, through OpenFeign")
     @ApiResponse(responseCode = "200", description = "Linked member and their loans")
     @ApiResponse(responseCode = "401", description = "Missing or invalid token")
     @ApiResponse(responseCode = "404", description = "No library member is linked to this account")
@@ -78,7 +84,11 @@ public class UserController {
     }
 
     @GetMapping
-    @Operation(summary = "List users (ADMIN)", description = "Paginated list, optionally filtered by role")
+    @Operation(summary = "List users (ADMIN)", description = "Paginated list, optionally filtered by role. Requires the ADMIN role.")
+    @ApiResponse(responseCode = "200", description = "Page of users")
+    @ApiResponse(responseCode = "400", description = "Unknown sort property")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
+    @ApiResponse(responseCode = "403", description = "Requires the ADMIN role")
     public PageResponse<UserResponse> findAll(
             @Parameter(description = "Exact role") @RequestParam(required = false) UserRole role,
             @ParameterObject @PageableDefault(size = 20, sort = "username", direction = Sort.Direction.ASC) Pageable pageable) {
@@ -86,19 +96,24 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get a user by id (ADMIN)")
+    @Operation(summary = "Get a user by id (ADMIN)", description = "Requires the ADMIN role.")
     @ApiResponse(responseCode = "200", description = "User found")
     @ApiResponse(responseCode = "404", description = "User not found")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
+    @ApiResponse(responseCode = "403", description = "Requires the ADMIN role")
     public UserResponse findById(@PathVariable Long id) {
         return userService.findById(id);
     }
 
     @PostMapping
-    @Operation(summary = "Create a user with any role (ADMIN)")
+    @Operation(summary = "Create a user with any role (ADMIN)",
+            description = "Requires the ADMIN role. A MEMBER account also gets a library member in member-service")
     @ApiResponse(responseCode = "201", description = "Account created in Keycloak")
     @ApiResponse(responseCode = "400", description = "Invalid payload")
     @ApiResponse(responseCode = "409", description = "Username or email already exists")
     @ApiResponse(responseCode = "502", description = "Keycloak error")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
+    @ApiResponse(responseCode = "403", description = "Requires the ADMIN role")
     public ResponseEntity<UserResponse> create(@Valid @RequestBody UserCreateRequest request) {
         UserResponse created = userService.create(request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -107,34 +122,46 @@ public class UserController {
     }
 
     @PutMapping("/{id}/role")
-    @Operation(summary = "Change the realm role of a user (ADMIN)")
+    @Operation(summary = "Change the realm role of a user (ADMIN)", description = "Requires the ADMIN role.")
     @ApiResponse(responseCode = "200", description = "Role changed")
+    @ApiResponse(responseCode = "400", description = "Missing or unknown role")
     @ApiResponse(responseCode = "404", description = "User not found")
     @ApiResponse(responseCode = "502", description = "Keycloak error")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
+    @ApiResponse(responseCode = "403", description = "Requires the ADMIN role")
     public UserResponse changeRole(@PathVariable Long id, @Valid @RequestBody RoleUpdateRequest request) {
         return userService.changeRole(id, request.role());
     }
 
     @PatchMapping("/{id}/enable")
-    @Operation(summary = "Enable a user (ADMIN)")
+    @Operation(summary = "Enable a user (ADMIN)", description = "Requires the ADMIN role.")
     @ApiResponse(responseCode = "200", description = "User enabled")
     @ApiResponse(responseCode = "404", description = "User not found")
+    @ApiResponse(responseCode = "502", description = "Keycloak error")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
+    @ApiResponse(responseCode = "403", description = "Requires the ADMIN role")
     public UserResponse enable(@PathVariable Long id) {
         return userService.setEnabled(id, true);
     }
 
     @PatchMapping("/{id}/disable")
-    @Operation(summary = "Disable a user, who can no longer log in (ADMIN)")
+    @Operation(summary = "Disable a user, who can no longer log in (ADMIN)", description = "Requires the ADMIN role.")
     @ApiResponse(responseCode = "200", description = "User disabled")
     @ApiResponse(responseCode = "404", description = "User not found")
+    @ApiResponse(responseCode = "502", description = "Keycloak error")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
+    @ApiResponse(responseCode = "403", description = "Requires the ADMIN role")
     public UserResponse disable(@PathVariable Long id) {
         return userService.setEnabled(id, false);
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete a user in Keycloak and locally (ADMIN)")
+    @Operation(summary = "Delete a user in Keycloak and locally (ADMIN)", description = "Requires the ADMIN role.")
     @ApiResponse(responseCode = "204", description = "User deleted")
     @ApiResponse(responseCode = "404", description = "User not found")
+    @ApiResponse(responseCode = "502", description = "Keycloak error")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
+    @ApiResponse(responseCode = "403", description = "Requires the ADMIN role")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         userService.delete(id);
         return ResponseEntity.noContent().build();

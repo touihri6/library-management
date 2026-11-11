@@ -11,27 +11,27 @@ import jakarta.validation.constraints.Size;
 @Schema(description = "Payload used by an admin to create an account with any role")
 public record UserCreateRequest(
 
-        @Schema(example = "sara")
+        @Schema(description = "Login, 3 to 50 letters, digits, dots, underscores or hyphens; must be unique", example = "sara")
         @NotBlank @Size(min = 3, max = 50) @Pattern(regexp = "^[a-zA-Z0-9._-]+$")
         String username,
 
-        @Schema(example = "sara@library.tn")
+        @Schema(description = "E-mail address; must be unique", example = "sara@library.tn")
         @NotBlank @Email @Size(max = 120)
         String email,
 
-        @Schema(example = "Sara")
+        @Schema(description = "First name", example = "Sara")
         @NotBlank @Size(max = 80)
         String firstName,
 
-        @Schema(example = "Trabelsi")
+        @Schema(description = "Last name", example = "Trabelsi")
         @NotBlank @Size(max = 80)
         String lastName,
 
-        @Schema(example = "S3cret!pass")
+        @Schema(description = "Password, 8 to 100 characters, stored only in Keycloak", example = "ChangeMe123!")
         @NotBlank @Size(min = 8, max = 100)
         String password,
 
-        @Schema(example = "LIBRARIAN")
+        @Schema(description = "Realm role given to the account in Keycloak", example = "LIBRARIAN")
         @NotNull
         UserRole role
 ) {

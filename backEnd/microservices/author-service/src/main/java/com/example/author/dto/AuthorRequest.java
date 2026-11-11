@@ -9,23 +9,23 @@ import jakarta.validation.constraints.Size;
 @Schema(description = "Payload used to create or update an author")
 public record AuthorRequest(
 
-        @Schema(example = "Frank")
+        @Schema(description = "First name of the author", example = "Frank")
         @NotBlank @Size(max = 80)
         String firstName,
 
-        @Schema(example = "Herbert")
+        @Schema(description = "Last name of the author", example = "Herbert")
         @NotBlank @Size(max = 80)
         String lastName,
 
-        @Schema(example = "American")
+        @Schema(description = "Nationality of the author", example = "American")
         @NotBlank @Size(max = 60)
         String nationality,
 
-        @Schema(example = "1920")
+        @Schema(description = "Year of birth, between 1000 and 2100", example = "1920", nullable = true)
         @Min(1000) @Max(2100)
         Integer birthYear,
 
-        @Schema(example = "Author of the Dune saga")
+        @Schema(description = "Short biography, at most 2000 characters", example = "Author of the Dune saga", nullable = true)
         @Size(max = 2000)
         String biography
 ) {

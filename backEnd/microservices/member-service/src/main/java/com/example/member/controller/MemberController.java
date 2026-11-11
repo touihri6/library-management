@@ -41,7 +41,12 @@ public class MemberController {
     }
 
     @GetMapping
-    @Operation(summary = "List members", description = "Paginated list, optionally filtered by last name, membership type and/or e-mail")
+    @Operation(summary = "List members",
+            description = "Paginated list, optionally filtered by last name, membership type, e-mail and/or linked account. Requires the LIBRARIAN, ADMIN or SERVICE role (SERVICE is used by the other microservices).")
+    @ApiResponse(responseCode = "200", description = "Page of members")
+    @ApiResponse(responseCode = "400", description = "Unknown sort property")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
+    @ApiResponse(responseCode = "403", description = "Requires the LIBRARIAN, ADMIN or SERVICE role")
     public PageResponse<MemberResponse> findAll(
             @Parameter(description = "Part of the last name (case-insensitive)") @RequestParam(required = false) String lastName,
             @Parameter(description = "Exact membership type") @RequestParam(required = false) MembershipType membershipType,
@@ -53,35 +58,43 @@ public class MemberController {
 
     @GetMapping("/me")
     @Operation(summary = "Get the member linked to the signed-in account",
-            description = "Looked up by the token's sub; a member with the token's e-mail and no account yet is linked on the fly")
+            description = "Looked up by the token's sub; a member with the token's e-mail and no account yet is linked on the fly. Requires any authenticated user; members only ever get their own member.")
     @ApiResponse(responseCode = "200", description = "Member found")
     @ApiResponse(responseCode = "404", description = "No member is linked to the account")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
     public MemberResponse findMine() {
         return memberService.findMine();
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get a member by id")
+    @Operation(summary = "Get a member by id", description = "Requires the LIBRARIAN or ADMIN role.")
     @ApiResponse(responseCode = "200", description = "Member found")
     @ApiResponse(responseCode = "404", description = "Member not found")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
+    @ApiResponse(responseCode = "403", description = "Requires the LIBRARIAN or ADMIN role")
     public MemberResponse findById(@PathVariable Long id) {
         return memberService.findById(id);
     }
 
     @GetMapping("/{id}/loans")
-    @Operation(summary = "Get a member with their loan history", description = "Loans are read from loan-service through OpenFeign")
+    @Operation(summary = "Get a member with their loan history", description = "Loans are read from loan-service through OpenFeign. Requires the LIBRARIAN or ADMIN role.")
     @ApiResponse(responseCode = "200", description = "Member and loans found")
     @ApiResponse(responseCode = "404", description = "Member not found")
     @ApiResponse(responseCode = "503", description = "loan-service unavailable")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
+    @ApiResponse(responseCode = "403", description = "Requires the LIBRARIAN or ADMIN role")
     public MemberLoans findLoans(@PathVariable Long id) {
         return memberService.findLoans(id);
     }
 
     @PostMapping
-    @Operation(summary = "Create a member")
+    @Operation(summary = "Create a member",
+            description = "Requires the LIBRARIAN, ADMIN or SERVICE role (SERVICE is used by the other microservices).")
     @ApiResponse(responseCode = "201", description = "Member created")
     @ApiResponse(responseCode = "400", description = "Invalid payload")
-    @ApiResponse(responseCode = "409", description = "Email already exists")
+    @ApiResponse(responseCode = "409", description = "Email already exists or the account is already linked to a member")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
+    @ApiResponse(responseCode = "403", description = "Requires the LIBRARIAN, ADMIN or SERVICE role")
     public ResponseEntity<MemberResponse> create(@Valid @RequestBody MemberRequest request) {
         MemberResponse created = memberService.create(request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -90,21 +103,27 @@ public class MemberController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update a member (full replacement)")
+    @Operation(summary = "Update a member (full replacement)",
+            description = "userId is ignored; the linked account cannot be changed. Requires the LIBRARIAN or ADMIN role.")
     @ApiResponse(responseCode = "200", description = "Member updated")
     @ApiResponse(responseCode = "400", description = "Invalid payload")
     @ApiResponse(responseCode = "404", description = "Member not found")
     @ApiResponse(responseCode = "409", description = "Email already used by another member")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
+    @ApiResponse(responseCode = "403", description = "Requires the LIBRARIAN or ADMIN role")
     public MemberResponse update(@PathVariable Long id, @Valid @RequestBody MemberRequest request) {
         return memberService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete a member")
+    @Operation(summary = "Delete a member",
+            description = "Refused while the member has ongoing loans in loan-service. Requires the LIBRARIAN or ADMIN role.")
     @ApiResponse(responseCode = "204", description = "Member deleted")
     @ApiResponse(responseCode = "404", description = "Member not found")
     @ApiResponse(responseCode = "409", description = "The member still has ongoing loans")
     @ApiResponse(responseCode = "503", description = "loan-service unavailable")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
+    @ApiResponse(responseCode = "403", description = "Requires the LIBRARIAN or ADMIN role")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         memberService.delete(id);
         return ResponseEntity.noContent().build();

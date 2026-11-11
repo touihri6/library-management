@@ -13,27 +13,27 @@ import java.time.LocalDateTime;
 @Schema(description = "Payload used to create or update an event")
 public record EventRequest(
 
-        @Schema(example = "Club de lecture : Dune")
+        @Schema(description = "Title of the event", example = "Club de lecture : Dune")
         @NotBlank @Size(max = 150)
         String title,
 
-        @Schema(example = "Discussion autour du roman de Frank Herbert")
+        @Schema(description = "Description of the event, at most 1000 characters", example = "Discussion autour du roman de Frank Herbert", nullable = true)
         @Size(max = 1000)
         String description,
 
-        @Schema(example = "READING_CLUB")
+        @Schema(description = "Type of event", example = "READING_CLUB")
         @NotNull
         EventType type,
 
-        @Schema(example = "2027-01-15T18:00:00")
+        @Schema(description = "Local date and time of the event; must be in the future", example = "2027-01-15T18:00:00")
         @NotNull @Future
         LocalDateTime eventDate,
 
-        @Schema(example = "Salle A")
+        @Schema(description = "Room or place where the event takes place", example = "Salle A")
         @NotBlank @Size(max = 120)
         String location,
 
-        @Schema(example = "25")
+        @Schema(description = "Maximum number of attendees, greater than 0", example = "25")
         @NotNull @Positive
         Integer capacity
 ) {

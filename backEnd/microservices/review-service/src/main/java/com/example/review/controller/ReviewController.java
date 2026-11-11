@@ -8,6 +8,7 @@ import com.example.review.service.ReviewService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springdoc.core.annotations.ParameterObject;
@@ -40,7 +41,10 @@ public class ReviewController {
     }
 
     @GetMapping
-    @Operation(summary = "List reviews", description = "Paginated list, optionally filtered by book")
+    @Operation(summary = "List reviews", description = "Paginated list, optionally filtered by book. Public.")
+    @ApiResponse(responseCode = "200", description = "Page of reviews")
+    @ApiResponse(responseCode = "400", description = "Unknown sort property")
+    @SecurityRequirements
     public PageResponse<ReviewResponse> findAll(
             @Parameter(description = "Book id") @RequestParam(required = false) Long bookId,
             @ParameterObject @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -48,25 +52,33 @@ public class ReviewController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get a review by id")
+    @Operation(summary = "Get a review by id", description = "Public.")
     @ApiResponse(responseCode = "200", description = "Review found")
     @ApiResponse(responseCode = "404", description = "Review not found")
+    @SecurityRequirements
     public ReviewResponse findById(@PathVariable Long id) {
         return reviewService.findById(id);
     }
 
     @GetMapping("/books/{bookId}/average")
-    @Operation(summary = "Average rating of a book", description = "Returns 0.0 and count 0 when the book has no review")
+    @Operation(summary = "Average rating of a book", description = "Public. Returns 0.0 and count 0 when the book has no review")
+    @ApiResponse(responseCode = "200", description = "Rating summary of the book")
+    @SecurityRequirements
     public RatingSummary averageForBook(@PathVariable Long bookId) {
         return reviewService.averageForBook(bookId);
     }
 
     @PostMapping
-    @Operation(summary = "Create a review", description = "The book is checked in book-service through OpenFeign")
+    @Operation(summary = "Create a review",
+            description = "Requires the MEMBER, LIBRARIAN or ADMIN role. The book is checked in book-service through OpenFeign. "
+                    + "The review is always linked to the caller (userId from the token); for a MEMBER the reviewer name also comes from the token. "
+                    + "The reviewerName in the body is only used when a LIBRARIAN or ADMIN writes on behalf of someone.")
     @ApiResponse(responseCode = "201", description = "Review created")
     @ApiResponse(responseCode = "400", description = "Invalid payload")
     @ApiResponse(responseCode = "404", description = "Book not found")
     @ApiResponse(responseCode = "503", description = "book-service unavailable")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
+    @ApiResponse(responseCode = "403", description = "Requires the MEMBER, LIBRARIAN or ADMIN role")
     public ResponseEntity<ReviewResponse> create(@Valid @RequestBody ReviewRequest request) {
         ReviewResponse created = reviewService.create(request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -75,19 +87,27 @@ public class ReviewController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update a review (full replacement)")
+    @Operation(summary = "Update a review (full replacement)",
+            description = "Requires the MEMBER, LIBRARIAN or ADMIN role. A MEMBER can only update their own review; "
+                    + "a LIBRARIAN or ADMIN can update any review and change the reviewer name.")
     @ApiResponse(responseCode = "200", description = "Review updated")
     @ApiResponse(responseCode = "400", description = "Invalid payload")
     @ApiResponse(responseCode = "404", description = "Review or book not found")
     @ApiResponse(responseCode = "503", description = "book-service unavailable")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
+    @ApiResponse(responseCode = "403", description = "Requires the MEMBER, LIBRARIAN or ADMIN role, or the caller is a MEMBER who is not the author of the review")
     public ReviewResponse update(@PathVariable Long id, @Valid @RequestBody ReviewRequest request) {
         return reviewService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete a review")
+    @Operation(summary = "Delete a review",
+            description = "Requires the MEMBER, LIBRARIAN or ADMIN role. A MEMBER can only delete their own review; "
+                    + "a LIBRARIAN or ADMIN can delete any review.")
     @ApiResponse(responseCode = "204", description = "Review deleted")
     @ApiResponse(responseCode = "404", description = "Review not found")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
+    @ApiResponse(responseCode = "403", description = "Requires the MEMBER, LIBRARIAN or ADMIN role, or the caller is a MEMBER who is not the author of the review")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         reviewService.delete(id);
         return ResponseEntity.noContent().build();

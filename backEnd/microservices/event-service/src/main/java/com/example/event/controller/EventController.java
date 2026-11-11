@@ -9,6 +9,7 @@ import com.example.event.service.EventService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springdoc.core.annotations.ParameterObject;
@@ -41,7 +42,10 @@ public class EventController {
     }
 
     @GetMapping
-    @Operation(summary = "List events", description = "Paginated list sorted by date, optionally filtered by type")
+    @Operation(summary = "List events", description = "Paginated list sorted by date, optionally filtered by type. Public.")
+    @ApiResponse(responseCode = "200", description = "Page of events")
+    @ApiResponse(responseCode = "400", description = "Unknown sort property")
+    @SecurityRequirements
     public PageResponse<EventResponse> findAll(
             @Parameter(description = "Event type") @RequestParam(required = false) EventType type,
             @ParameterObject @PageableDefault(size = 20, sort = "eventDate", direction = Sort.Direction.ASC) Pageable pageable) {
@@ -49,17 +53,20 @@ public class EventController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get an event by id")
+    @Operation(summary = "Get an event by id", description = "Public.")
     @ApiResponse(responseCode = "200", description = "Event found")
     @ApiResponse(responseCode = "404", description = "Event not found")
+    @SecurityRequirements
     public EventResponse findById(@PathVariable Long id) {
         return eventService.findById(id);
     }
 
     @PostMapping
-    @Operation(summary = "Create an event")
+    @Operation(summary = "Create an event", description = "Requires the LIBRARIAN or ADMIN role.")
     @ApiResponse(responseCode = "201", description = "Event created")
     @ApiResponse(responseCode = "400", description = "Invalid payload or date in the past")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
+    @ApiResponse(responseCode = "403", description = "Requires the LIBRARIAN or ADMIN role")
     public ResponseEntity<EventResponse> create(@Valid @RequestBody EventRequest request) {
         EventResponse created = eventService.create(request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -68,18 +75,22 @@ public class EventController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update an event (full replacement)")
+    @Operation(summary = "Update an event (full replacement)", description = "Requires the LIBRARIAN or ADMIN role.")
     @ApiResponse(responseCode = "200", description = "Event updated")
     @ApiResponse(responseCode = "400", description = "Invalid payload or date in the past")
     @ApiResponse(responseCode = "404", description = "Event not found")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
+    @ApiResponse(responseCode = "403", description = "Requires the LIBRARIAN or ADMIN role")
     public EventResponse update(@PathVariable Long id, @Valid @RequestBody EventRequest request) {
         return eventService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete an event")
+    @Operation(summary = "Delete an event", description = "Requires the LIBRARIAN or ADMIN role.")
     @ApiResponse(responseCode = "204", description = "Event deleted")
     @ApiResponse(responseCode = "404", description = "Event not found")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
+    @ApiResponse(responseCode = "403", description = "Requires the LIBRARIAN or ADMIN role")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         eventService.delete(id);
         return ResponseEntity.noContent().build();
@@ -87,11 +98,15 @@ public class EventController {
 
     @PostMapping("/{id}/announce")
     @Operation(summary = "Announce an event to every member",
-            description = "Members are read from member-service and notifications sent to notification-service through OpenFeign")
+            description = "Requires the LIBRARIAN or ADMIN role. Members are read from member-service and notifications sent to notification-service "
+                    + "through OpenFeign, relaying the caller's token. A notification that notification-service cannot create is counted in failed "
+                    + "instead of failing the whole call.")
     @ApiResponse(responseCode = "200", description = "Announcement sent, with the number of notifications created")
     @ApiResponse(responseCode = "404", description = "Event not found")
     @ApiResponse(responseCode = "409", description = "The event is already over")
     @ApiResponse(responseCode = "503", description = "member-service unavailable")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
+    @ApiResponse(responseCode = "403", description = "Requires the LIBRARIAN or ADMIN role")
     public AnnouncementResponse announce(@PathVariable Long id) {
         return eventService.announce(id);
     }

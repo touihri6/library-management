@@ -8,6 +8,7 @@ import com.example.author.service.AuthorService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springdoc.core.annotations.ParameterObject;
@@ -40,7 +41,10 @@ public class AuthorController {
     }
 
     @GetMapping
-    @Operation(summary = "List authors", description = "Paginated list, optionally filtered by last name and/or nationality")
+    @Operation(summary = "List authors", description = "Paginated list, optionally filtered by last name and/or nationality. Public.")
+    @ApiResponse(responseCode = "200", description = "Page of authors")
+    @ApiResponse(responseCode = "400", description = "Unknown sort property")
+    @SecurityRequirements
     public PageResponse<AuthorResponse> findAll(
             @Parameter(description = "Part of the last name (case-insensitive)") @RequestParam(required = false) String lastName,
             @Parameter(description = "Nationality (case-insensitive)") @RequestParam(required = false) String nationality,
@@ -49,26 +53,30 @@ public class AuthorController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get an author by id")
+    @Operation(summary = "Get an author by id", description = "Public.")
     @ApiResponse(responseCode = "200", description = "Author found")
     @ApiResponse(responseCode = "404", description = "Author not found")
+    @SecurityRequirements
     public AuthorResponse findById(@PathVariable Long id) {
         return authorService.findById(id);
     }
 
     @GetMapping("/{id}/books")
-    @Operation(summary = "Get an author with their books", description = "Books are read from book-service through OpenFeign")
+    @Operation(summary = "Get an author with their books", description = "Public. Books are read from book-service through OpenFeign")
     @ApiResponse(responseCode = "200", description = "Author and books found")
     @ApiResponse(responseCode = "404", description = "Author not found")
     @ApiResponse(responseCode = "503", description = "book-service unavailable")
+    @SecurityRequirements
     public AuthorBooks findBooks(@PathVariable Long id) {
         return authorService.findBooks(id);
     }
 
     @PostMapping
-    @Operation(summary = "Create an author")
+    @Operation(summary = "Create an author", description = "Requires the LIBRARIAN or ADMIN role.")
     @ApiResponse(responseCode = "201", description = "Author created")
     @ApiResponse(responseCode = "400", description = "Invalid payload")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
+    @ApiResponse(responseCode = "403", description = "Requires the LIBRARIAN or ADMIN role")
     public ResponseEntity<AuthorResponse> create(@Valid @RequestBody AuthorRequest request) {
         AuthorResponse created = authorService.create(request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -77,20 +85,25 @@ public class AuthorController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update an author (full replacement)")
+    @Operation(summary = "Update an author (full replacement)", description = "Requires the LIBRARIAN or ADMIN role.")
     @ApiResponse(responseCode = "200", description = "Author updated")
     @ApiResponse(responseCode = "400", description = "Invalid payload")
     @ApiResponse(responseCode = "404", description = "Author not found")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
+    @ApiResponse(responseCode = "403", description = "Requires the LIBRARIAN or ADMIN role")
     public AuthorResponse update(@PathVariable Long id, @Valid @RequestBody AuthorRequest request) {
         return authorService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete an author")
+    @Operation(summary = "Delete an author",
+            description = "Requires the LIBRARIAN or ADMIN role. Refused while book-service still lists books by this author")
     @ApiResponse(responseCode = "204", description = "Author deleted")
     @ApiResponse(responseCode = "404", description = "Author not found")
     @ApiResponse(responseCode = "409", description = "The author still has books in the catalog")
     @ApiResponse(responseCode = "503", description = "book-service unavailable")
+    @ApiResponse(responseCode = "401", description = "Missing or invalid token")
+    @ApiResponse(responseCode = "403", description = "Requires the LIBRARIAN or ADMIN role")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         authorService.delete(id);
         return ResponseEntity.noContent().build();

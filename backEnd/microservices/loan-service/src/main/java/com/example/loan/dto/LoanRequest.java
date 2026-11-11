@@ -9,19 +9,19 @@ import java.time.LocalDate;
 @Schema(description = "Payload used to create or update a loan")
 public record LoanRequest(
 
-        @Schema(example = "1")
+        @Schema(description = "Id of the book in book-service; cannot be changed on update", example = "3")
         @NotNull @Positive
         Long bookId,
 
-        @Schema(example = "1")
+        @Schema(description = "Id of the member in member-service", example = "1")
         @NotNull @Positive
         Long memberId,
 
-        @Schema(example = "2026-10-01")
+        @Schema(description = "Day the book is borrowed", example = "2026-10-01")
         @NotNull
         LocalDate loanDate,
 
-        @Schema(example = "2026-10-15")
+        @Schema(description = "Day the book must be returned; must be after loanDate", example = "2026-10-15")
         @NotNull
         LocalDate dueDate
 ) {
